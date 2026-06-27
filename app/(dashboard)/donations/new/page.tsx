@@ -1,0 +1,27 @@
+import { redirect } from "next/navigation"
+import { requireSession, canWrite } from "@/lib/permissions"
+import { createDonation, getDonorsForPicker } from "../actions"
+import { DonationForm } from "@/components/donations/donation-form"
+import { Topbar } from "@/components/layout/topbar"
+import { db } from "@/lib/db"
+
+export default async function NewDonationPage() {
+  const session = await requireSession()
+  if (!canWrite(session)) redirect("/donations")
+  const [donors, recipients] = await Promise.all([
+    getDonorsForPicker(),
+    db.recipient.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ])
+  return (
+    <>
+      <Topbar title="Record Donation" />
+      <div className="p-6">
+        <DonationForm onSubmit={createDonation} donors={donors} recipients={recipients} />
+      </div>
+    </>
+  )
+}
