@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+.env*.local
+docker-compose*.yml
+Dockerfile*
+*.md
+.superpowers
+docs
+tests

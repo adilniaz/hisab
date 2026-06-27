@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - hisab-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hisab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app:
     build:
@@ -19,7 +24,8 @@ services:
     container_name: hisab-app
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://hisab:hisab@postgres:5432/hisab
       AUTH_SECRET: dev-secret-do-not-use-in-production
