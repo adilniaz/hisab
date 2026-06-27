@@ -1,3 +1,1 @@
-import { expect } from "vitest"
-import matchers from "@testing-library/jest-dom/matchers"
-expect.extend(matchers)
+// Unit tests run in node environment — no DOM setup needed
