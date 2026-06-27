@@ -25,10 +25,11 @@ type Fields = z.infer<typeof schema>
 interface Donor { id: string; name: string | null; isAnonymous: boolean }
 interface Recipient { id: string; name: string }
 
-export function DonationForm({ onSubmit, donors, recipients }: {
+export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
   onSubmit: (data: Fields) => Promise<void>
   donors: Donor[]
   recipients: Recipient[]
+  defaultValues?: Partial<Fields>
 }) {
   const router = useRouter()
   const [serverError, setServerError] = useState("")
@@ -40,6 +41,7 @@ export function DonationForm({ onSubmit, donors, recipients }: {
       paymentMethod: "CASH",
       paymentContext: "GENERAL",
       isAnonymous: false,
+      ...defaultValues,
     },
   })
   const isAnonymous = watch("isAnonymous")

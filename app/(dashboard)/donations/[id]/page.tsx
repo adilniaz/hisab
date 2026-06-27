@@ -1,12 +1,17 @@
 import { notFound } from "next/navigation"
 import { getDonation } from "../actions"
+import { requireSession } from "@/lib/permissions"
 import { Topbar } from "@/components/layout/topbar"
 import { Badge } from "@/components/ui/badge"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 export default async function DonationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const donation = await getDonation(id)
+  const [donation, session] = await Promise.all([getDonation(id), requireSession()])
   if (!donation) notFound()
+  const isAdmin = session.user.role === "ADMIN"
 
   const distributed = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
   const remaining = Math.max(0, Number(donation.amount) - distributed)
@@ -15,6 +20,13 @@ export default async function DonationDetailPage({ params }: { params: Promise<{
     <>
       <Topbar title="Donation Detail" />
       <div className="p-6 space-y-6">
+        {isAdmin && (
+          <div>
+            <Link href={`/donations/${id}/edit`} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+              Edit
+            </Link>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4 text-sm max-w-lg">
           <div>
             <span className="text-muted-foreground">Donor:</span>{" "}

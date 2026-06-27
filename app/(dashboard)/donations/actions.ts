@@ -1,6 +1,6 @@
 "use server"
 import { db } from "@/lib/db"
-import { requireSession, canWrite, donorFilter } from "@/lib/permissions"
+import { requireSession, requireAdmin, canWrite, donorFilter } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
@@ -62,6 +62,27 @@ export async function getDonation(id: string) {
       recordedBy: { select: { name: true } },
     },
   })
+}
+
+export async function updateDonation(id: string, data: z.infer<typeof DonationSchema>) {
+  await requireAdmin()
+  const parsed = DonationSchema.parse(data)
+  await db.donation.update({
+    where: { id },
+    data: {
+      donorId: parsed.isAnonymous || !parsed.donorId ? null : parsed.donorId,
+      amount: parsed.amount,
+      date: new Date(parsed.date),
+      paymentMethod: parsed.paymentMethod,
+      paymentContext: parsed.paymentContext,
+      type: parsed.type,
+      designatedRecipientId: parsed.type === "DESIGNATED" && parsed.designatedRecipientId ? parsed.designatedRecipientId : null,
+      notes: parsed.notes,
+    },
+  })
+  revalidatePath("/donations")
+  revalidatePath(`/donations/${id}`)
+  revalidatePath("/overview")
 }
 
 export async function getDonorsForPicker() {
