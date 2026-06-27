@@ -69,6 +69,7 @@ model Donor {
   isRecurring Boolean     @default(false)
   notes       String?
   createdAt   DateTime    @default(now())
+  deletedAt   DateTime?
   donations   Donation[]
   userScopes  UserScope[]
 }
@@ -82,6 +83,7 @@ model Recipient {
   notes               String?
   isActive            Boolean            @default(true)
   createdAt           DateTime           @default(now())
+  deletedAt           DateTime?
   distributions       Distribution[]
   designatedDonations Donation[]         @relation("DesignatedRecipient")
   userScopes          UserScope[]
@@ -102,6 +104,7 @@ model Donation {
   recordedById          String
   recordedBy            User           @relation("RecordedDonations", fields: [recordedById], references: [id])
   createdAt             DateTime       @default(now())
+  deletedAt             DateTime?
   distributions         Distribution[]
 }
 
@@ -118,6 +121,7 @@ model Distribution {
   recordedById String
   recordedBy   User      @relation("RecordedDistributions", fields: [recordedById], references: [id])
   createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
 }
 
 model UserScope {

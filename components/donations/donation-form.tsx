@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -52,9 +53,11 @@ export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
       onSubmit={handleSubmit(async (data) => {
         try {
           await onSubmit(data)
+          toast.success("Donation saved")
           router.push("/donations")
         } catch (e: any) {
           setServerError(e.message)
+          toast.error(e.message)
         }
       })}
       className="space-y-4 max-w-lg"

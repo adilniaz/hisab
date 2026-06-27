@@ -1,19 +1,35 @@
 import { notFound } from "next/navigation"
-import { getDonor } from "../actions"
+import { getDonor, deleteDonor } from "../actions"
 import { Topbar } from "@/components/layout/topbar"
 import { Badge } from "@/components/ui/badge"
+import { DeleteButton } from "@/components/ui/delete-button"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import Link from "next/link"
+import { requireSession, canWrite } from "@/lib/permissions"
 
 export default async function DonorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const donor = await getDonor(id)
+  const [donor, session] = await Promise.all([getDonor(id), requireSession()])
   if (!donor) notFound()
 
   const total = donor.donations.reduce((s, d) => s + Number(d.amount), 0)
+  const isAdmin = session.user.role === "ADMIN"
 
   return (
     <>
       <Topbar title={donor.isAnonymous ? "Anonymous Donor" : (donor.name ?? "Donor")} />
       <div className="p-6 space-y-6">
+        {canWrite(session) && (
+          <div className="flex gap-2">
+            <Link href={`/donors/${id}/edit`} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+              Edit
+            </Link>
+            {isAdmin && (
+              <DeleteButton action={() => deleteDonor(id)} noun="donor" redirectTo="/donors" />
+            )}
+          </div>
+        )}
         <div className="flex gap-6 items-start flex-wrap">
           <div className="space-y-1 text-sm">
             {donor.phone && (

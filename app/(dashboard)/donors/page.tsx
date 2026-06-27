@@ -2,17 +2,19 @@ import { getDonors } from "./actions"
 import { DonorTable } from "@/components/donors/donor-table"
 import { Topbar } from "@/components/layout/topbar"
 import { Button } from "@/components/ui/button"
+import { Pagination } from "@/components/ui/pagination"
 import Link from "next/link"
 import { requireSession, canWrite } from "@/lib/permissions"
 
 export default async function DonorsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>
 }) {
   const session = await requireSession()
-  const { q } = await searchParams
-  const donors = await getDonors(q)
+  const { q, page: pageStr } = await searchParams
+  const page = Number(pageStr ?? "1")
+  const { items, total, pageSize } = await getDonors({ q, page })
   return (
     <>
       <Topbar title="Donors" />
@@ -32,7 +34,8 @@ export default async function DonorsPage({
             </Link>
           )}
         </div>
-        <DonorTable donors={donors} />
+        <DonorTable donors={items} />
+        <Pagination page={page} total={total} pageSize={pageSize} basePath="/donors" params={{ q }} />
       </div>
     </>
   )

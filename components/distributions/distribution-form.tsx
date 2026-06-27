@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,16 +24,23 @@ type Fields = z.infer<typeof schema>
 interface Recipient { id: string; name: string }
 interface DesignatedDonation { id: string; amount: number; remaining: number; date: Date }
 
-export function DistributionForm({ onSubmit, recipients }: {
+export function DistributionForm({
+  onSubmit,
+  recipients,
+  defaultValues,
+  defaultDesignatedDonations = [],
+}: {
   onSubmit: (data: Fields) => Promise<void>
   recipients: Recipient[]
+  defaultValues?: Partial<Fields>
+  defaultDesignatedDonations?: DesignatedDonation[]
 }) {
   const router = useRouter()
-  const [designatedDonations, setDesignatedDonations] = useState<DesignatedDonation[]>([])
+  const [designatedDonations, setDesignatedDonations] = useState<DesignatedDonation[]>(defaultDesignatedDonations)
   const [serverError, setServerError] = useState("")
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Fields>({
     resolver: zodResolver(schema),
-    defaultValues: { date: new Date().toISOString().slice(0, 10) },
+    defaultValues: { date: new Date().toISOString().slice(0, 10), ...defaultValues },
   })
 
   async function handleRecipientChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -50,9 +58,11 @@ export function DistributionForm({ onSubmit, recipients }: {
       onSubmit={handleSubmit(async (data) => {
         try {
           await onSubmit(data)
+          toast.success("Distribution saved")
           router.push("/distributions")
         } catch (e: any) {
           setServerError(e.message)
+          toast.error(e.message)
         }
       })}
       className="space-y-4 max-w-lg"
@@ -60,8 +70,7 @@ export function DistributionForm({ onSubmit, recipients }: {
       <div className="space-y-1">
         <Label>Recipient *</Label>
         <select
-          {...register("recipientId")}
-          onChange={handleRecipientChange}
+          {...register("recipientId", { onChange: handleRecipientChange })}
           className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
         >
           <option value="">Select recipient…</option>

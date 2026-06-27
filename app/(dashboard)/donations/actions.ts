@@ -4,6 +4,8 @@ import { requireSession, requireAdmin, canWrite, donorFilter } from "@/lib/permi
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+const PAGE_SIZE = 25
+
 const DonationSchema = z.object({
   donorId: z.string().uuid().optional().or(z.literal("")),
   isAnonymous: z.boolean().default(false),
@@ -37,33 +39,6 @@ export async function createDonation(data: z.infer<typeof DonationSchema>) {
   revalidatePath("/overview")
 }
 
-export async function getDonations() {
-  const session = await requireSession()
-  const scopeWhere = donorFilter(session)
-  return db.donation.findMany({
-    where: Object.keys(scopeWhere).length ? { donor: scopeWhere } : undefined,
-    include: {
-      donor: true,
-      designatedRecipient: { select: { name: true } },
-      recordedBy: { select: { name: true } },
-    },
-    orderBy: { date: "desc" },
-  })
-}
-
-export async function getDonation(id: string) {
-  await requireSession()
-  return db.donation.findUnique({
-    where: { id },
-    include: {
-      donor: true,
-      designatedRecipient: true,
-      distributions: { include: { recipient: true } },
-      recordedBy: { select: { name: true } },
-    },
-  })
-}
-
 export async function updateDonation(id: string, data: z.infer<typeof DonationSchema>) {
   await requireAdmin()
   const parsed = DonationSchema.parse(data)
@@ -85,11 +60,66 @@ export async function updateDonation(id: string, data: z.infer<typeof DonationSc
   revalidatePath("/overview")
 }
 
+export async function deleteDonation(id: string) {
+  await requireAdmin()
+  await db.donation.update({ where: { id }, data: { deletedAt: new Date() } })
+  revalidatePath("/donations")
+  revalidatePath("/overview")
+}
+
+export async function getDonations(params: { page?: number; q?: string; from?: string; to?: string } = {}) {
+  const session = await requireSession()
+  const scopeWhere = donorFilter(session)
+  const page = params.page ?? 1
+  const donorWhere = {
+    ...scopeWhere,
+    ...(params.q ? { name: { contains: params.q, mode: "insensitive" as const } } : {}),
+  }
+  const where = {
+    deletedAt: null,
+    ...(Object.keys(donorWhere).length ? { donor: donorWhere } : {}),
+    ...(params.from || params.to ? {
+      date: {
+        ...(params.from ? { gte: new Date(params.from) } : {}),
+        ...(params.to ? { lte: new Date(params.to) } : {}),
+      },
+    } : {}),
+  }
+  const [items, total] = await Promise.all([
+    db.donation.findMany({
+      where,
+      include: {
+        donor: true,
+        designatedRecipient: { select: { name: true } },
+        recordedBy: { select: { name: true } },
+      },
+      orderBy: { date: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    db.donation.count({ where }),
+  ])
+  return { items, total, page, pageSize: PAGE_SIZE }
+}
+
+export async function getDonation(id: string) {
+  await requireSession()
+  return db.donation.findFirst({
+    where: { id, deletedAt: null },
+    include: {
+      donor: true,
+      designatedRecipient: true,
+      distributions: { where: { deletedAt: null }, include: { recipient: true } },
+      recordedBy: { select: { name: true } },
+    },
+  })
+}
+
 export async function getDonorsForPicker() {
   const session = await requireSession()
   const scopeWhere = donorFilter(session)
   return db.donor.findMany({
-    where: scopeWhere,
+    where: { deletedAt: null, ...scopeWhere },
     select: { id: true, name: true, isAnonymous: true },
     orderBy: { name: "asc" },
   })

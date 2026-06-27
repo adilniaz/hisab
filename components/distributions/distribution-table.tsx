@@ -1,3 +1,4 @@
+import Link from "next/link"
 import type { Distribution, Recipient } from "@prisma/client"
 
 type Row = Distribution & {
@@ -26,7 +27,9 @@ export function DistributionTable({ distributions }: { distributions: Row[] }) {
         {distributions.map((d) => (
           <tr key={d.id} className="border-b border-border hover:bg-accent/50">
             <td className="py-2">{new Date(d.date).toLocaleDateString()}</td>
-            <td className="py-2 font-medium">{d.recipient.name}</td>
+            <td className="py-2 font-medium">
+              <Link href={`/distributions/${d.id}`} className="hover:underline">{d.recipient.name}</Link>
+            </td>
             <td className="py-2 text-red-400 font-semibold">
               PKR {Number(d.amount).toLocaleString()}
             </td>

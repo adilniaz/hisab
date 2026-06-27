@@ -1,19 +1,35 @@
 import { notFound } from "next/navigation"
-import { getRecipient } from "../actions"
+import { getRecipient, deleteRecipient } from "../actions"
 import { Topbar } from "@/components/layout/topbar"
 import { Badge } from "@/components/ui/badge"
+import { DeleteButton } from "@/components/ui/delete-button"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import Link from "next/link"
+import { requireSession, canWrite } from "@/lib/permissions"
 
 export default async function RecipientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const recipient = await getRecipient(id)
+  const [recipient, session] = await Promise.all([getRecipient(id), requireSession()])
   if (!recipient) notFound()
 
   const total = recipient.distributions.reduce((s, d) => s + Number(d.amount), 0)
+  const isAdmin = session.user.role === "ADMIN"
 
   return (
     <>
       <Topbar title={recipient.name} />
       <div className="p-6 space-y-6">
+        {canWrite(session) && (
+          <div className="flex gap-2">
+            <Link href={`/recipients/${id}/edit`} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+              Edit
+            </Link>
+            {isAdmin && (
+              <DeleteButton action={() => deleteRecipient(id)} noun="recipient" redirectTo="/recipients" />
+            )}
+          </div>
+        )}
         <div className="space-y-1 text-sm">
           <p>
             <span className="text-muted-foreground">Category:</span>{" "}

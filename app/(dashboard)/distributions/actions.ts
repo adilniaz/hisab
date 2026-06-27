@@ -1,9 +1,10 @@
 "use server"
 import { db } from "@/lib/db"
-import { requireSession, canWrite, recipientFilter } from "@/lib/permissions"
-import { getDonationRemainingBalance } from "@/lib/balance"
+import { requireSession, requireAdmin, canWrite, recipientFilter } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+
+const PAGE_SIZE = 25
 
 const DistributionSchema = z.object({
   recipientId: z.string().uuid(),
@@ -18,15 +19,17 @@ export async function createDistribution(data: z.infer<typeof DistributionSchema
   const session = await requireSession()
   if (!canWrite(session)) throw new Error("Unauthorized")
   const parsed = DistributionSchema.parse(data)
-
   const donationId = parsed.donationId || undefined
 
   if (donationId) {
-    const remaining = await getDonationRemainingBalance(donationId)
+    const donation = await db.donation.findUniqueOrThrow({
+      where: { id: donationId },
+      include: { distributions: { where: { deletedAt: null }, select: { amount: true } } },
+    })
+    const spent = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
+    const remaining = Math.max(0, Number(donation.amount) - spent)
     if (parsed.amount > remaining) {
-      throw new Error(
-        `Amount PKR ${parsed.amount} exceeds remaining balance of PKR ${remaining} on this donation`
-      )
+      throw new Error(`Amount PKR ${parsed.amount} exceeds remaining balance of PKR ${remaining} on this donation`)
     }
   }
 
@@ -45,25 +48,91 @@ export async function createDistribution(data: z.infer<typeof DistributionSchema
   revalidatePath("/overview")
 }
 
-export async function getDistributions() {
+export async function updateDistribution(id: string, data: z.infer<typeof DistributionSchema>) {
+  await requireAdmin()
+  const parsed = DistributionSchema.parse(data)
+  const donationId = parsed.donationId || undefined
+
+  if (donationId) {
+    const donation = await db.donation.findUniqueOrThrow({
+      where: { id: donationId },
+      include: { distributions: { where: { id: { not: id }, deletedAt: null }, select: { amount: true } } },
+    })
+    const spent = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
+    const remaining = Math.max(0, Number(donation.amount) - spent)
+    if (parsed.amount > remaining) {
+      throw new Error(`Amount PKR ${parsed.amount} exceeds remaining balance of PKR ${remaining}`)
+    }
+  }
+
+  await db.distribution.update({
+    where: { id },
+    data: {
+      recipientId: parsed.recipientId,
+      amount: parsed.amount,
+      date: new Date(parsed.date),
+      purpose: parsed.purpose,
+      donationId: donationId ?? null,
+      notes: parsed.notes,
+    },
+  })
+  revalidatePath("/distributions")
+  revalidatePath("/overview")
+}
+
+export async function deleteDistribution(id: string) {
+  await requireAdmin()
+  await db.distribution.update({ where: { id }, data: { deletedAt: new Date() } })
+  revalidatePath("/distributions")
+  revalidatePath("/overview")
+}
+
+export async function getDistributions(params: { page?: number; q?: string } = {}) {
   const session = await requireSession()
   const scopeWhere = recipientFilter(session)
-  return db.distribution.findMany({
-    where: Object.keys(scopeWhere).length ? { recipient: scopeWhere } : undefined,
+  const page = params.page ?? 1
+  const recipientFilter2 = {
+    ...scopeWhere,
+    ...(params.q ? { name: { contains: params.q, mode: "insensitive" as const } } : {}),
+  }
+  const where = {
+    deletedAt: null,
+    ...(Object.keys(recipientFilter2).length ? { recipient: recipientFilter2 } : {}),
+  }
+  const [items, total] = await Promise.all([
+    db.distribution.findMany({
+      where,
+      include: {
+        recipient: true,
+        donation: { select: { paymentContext: true, donor: { select: { name: true } } } },
+        recordedBy: { select: { name: true } },
+      },
+      orderBy: { date: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    db.distribution.count({ where }),
+  ])
+  return { items, total, page, pageSize: PAGE_SIZE }
+}
+
+export async function getDistribution(id: string) {
+  await requireSession()
+  return db.distribution.findFirst({
+    where: { id, deletedAt: null },
     include: {
       recipient: true,
-      donation: { select: { paymentContext: true, donor: { select: { name: true } } } },
+      donation: { select: { id: true, paymentContext: true, donor: { select: { name: true } } } },
       recordedBy: { select: { name: true } },
     },
-    orderBy: { date: "desc" },
   })
 }
 
 export async function getDesignatedDonationsForRecipient(recipientId: string) {
   await requireSession()
   const donations = await db.donation.findMany({
-    where: { type: "DESIGNATED", designatedRecipientId: recipientId },
-    include: { distributions: { select: { amount: true } } },
+    where: { type: "DESIGNATED", designatedRecipientId: recipientId, deletedAt: null },
+    include: { distributions: { where: { deletedAt: null }, select: { amount: true } } },
   })
   return donations
     .map((d) => {
