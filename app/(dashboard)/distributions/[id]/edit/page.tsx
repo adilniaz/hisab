@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation"
-import { requireAdmin } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { getDistribution, updateDistribution, getDesignatedDonationsForRecipient } from "../../actions"
 import { DistributionForm } from "@/components/distributions/distribution-form"
 import { Topbar } from "@/components/layout/topbar"
 import { db } from "@/lib/db"
 
 export default async function EditDistributionPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const { id } = await params
   const [distribution, recipients] = await Promise.all([
     getDistribution(id),

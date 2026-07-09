@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { getDonation } from "../actions"
-import { requireSession } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { Topbar } from "@/components/layout/topbar"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import Link from "next/link"
 
 export default async function DonationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [donation, session] = await Promise.all([getDonation(id), requireSession()])
+  const [donation, session] = await Promise.all([getDonation(id), requireAuth()])
   if (!donation) notFound()
   const isAdmin = session.user.role === "ADMIN"
 

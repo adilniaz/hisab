@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { getUserWithScope, updateUser } from "../actions"
 import { UserForm } from "@/components/users/user-form"
 import { Topbar } from "@/components/layout/topbar"
@@ -6,7 +6,7 @@ import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const { id } = await params
   const [user, allDonors, allRecipients] = await Promise.all([
     getUserWithScope(id),

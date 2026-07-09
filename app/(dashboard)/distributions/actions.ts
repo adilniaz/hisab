@@ -1,6 +1,6 @@
 "use server"
 import { db } from "@/lib/db"
-import { requireSession, requireAdmin, canWrite, recipientFilter } from "@/lib/permissions"
+import { requireAuth, canModify, recipientFilter } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
@@ -16,8 +16,8 @@ const DistributionSchema = z.object({
 })
 
 export async function createDistribution(data: z.infer<typeof DistributionSchema>) {
-  const session = await requireSession()
-  if (!canWrite(session)) throw new Error("Unauthorized")
+  const session = await requireAuth()
+  if (!canModify(session)) throw new Error("Unauthorized")
   const parsed = DistributionSchema.parse(data)
   const donationId = parsed.donationId || undefined
 
@@ -49,7 +49,7 @@ export async function createDistribution(data: z.infer<typeof DistributionSchema
 }
 
 export async function updateDistribution(id: string, data: z.infer<typeof DistributionSchema>) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const parsed = DistributionSchema.parse(data)
   const donationId = parsed.donationId || undefined
 
@@ -81,14 +81,14 @@ export async function updateDistribution(id: string, data: z.infer<typeof Distri
 }
 
 export async function deleteDistribution(id: string) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   await db.distribution.update({ where: { id }, data: { deletedAt: new Date() } })
   revalidatePath("/distributions")
   revalidatePath("/overview")
 }
 
 export async function getDistributions(params: { page?: number; q?: string } = {}) {
-  const session = await requireSession()
+  const session = await requireAuth()
   const scopeWhere = recipientFilter(session)
   const page = params.page ?? 1
   const recipientFilter2 = {
@@ -117,7 +117,7 @@ export async function getDistributions(params: { page?: number; q?: string } = {
 }
 
 export async function getDistribution(id: string) {
-  await requireSession()
+  await requireAuth()
   return db.distribution.findFirst({
     where: { id, deletedAt: null },
     include: {
@@ -129,7 +129,7 @@ export async function getDistribution(id: string) {
 }
 
 export async function getDesignatedDonationsForRecipient(recipientId: string) {
-  await requireSession()
+  await requireAuth()
   const donations = await db.donation.findMany({
     where: { type: "DESIGNATED", designatedRecipientId: recipientId, deletedAt: null },
     include: { distributions: { where: { deletedAt: null }, select: { amount: true } } },

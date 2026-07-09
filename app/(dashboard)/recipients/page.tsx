@@ -4,14 +4,14 @@ import { Topbar } from "@/components/layout/topbar"
 import { Button } from "@/components/ui/button"
 import { Pagination } from "@/components/ui/pagination"
 import Link from "next/link"
-import { requireSession, canWrite } from "@/lib/permissions"
+import { requireAuth, canModify } from "@/lib/permissions"
 
 export default async function RecipientsPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; page?: string }>
 }) {
-  const session = await requireSession()
+  const session = await requireAuth()
   const { q, page: pageStr } = await searchParams
   const page = Number(pageStr ?? "1")
   const { items, total, pageSize } = await getRecipients({ q, page })
@@ -28,7 +28,7 @@ export default async function RecipientsPage({
               className="border border-border rounded px-3 py-1.5 text-sm bg-background"
             />
           </form>
-          {canWrite(session) && (
+          {canModify(session) && (
             <Link href="/recipients/new">
               <Button size="sm">Add Recipient</Button>
             </Link>

@@ -2,13 +2,13 @@ import { notFound, redirect } from "next/navigation"
 import { getRecipient, updateRecipient } from "../../actions"
 import { RecipientForm } from "@/components/recipients/recipient-form"
 import { Topbar } from "@/components/layout/topbar"
-import { requireSession, canWrite } from "@/lib/permissions"
+import { requireAuth, canModify } from "@/lib/permissions"
 
 export default async function RecipientEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [recipient, session] = await Promise.all([getRecipient(id), requireSession()])
+  const [recipient, session] = await Promise.all([getRecipient(id), requireAuth()])
   if (!recipient) notFound()
-  if (!canWrite(session)) redirect(`/recipients/${id}`)
+  if (!canModify(session)) redirect(`/recipients/${id}`)
 
   return (
     <>

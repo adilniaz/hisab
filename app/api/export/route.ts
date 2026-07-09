@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { db } from "@/lib/db"
-
-function toCSV(headers: string[], rows: (string | number | null | undefined)[][]): string {
-  const escape = (v: string | number | null | undefined) => {
-    const s = String(v ?? "")
-    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s
-  }
-  return [headers, ...rows].map((row) => row.map(escape).join(",")).join("\n")
-}
+import { toCsv, csvResponse } from "@/lib/export-utils"
 
 export async function GET(req: NextRequest) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const type = req.nextUrl.searchParams.get("type") ?? "donations"
 
   let csv: string
@@ -23,7 +16,7 @@ export async function GET(req: NextRequest) {
       include: { donor: true, designatedRecipient: true, recordedBy: { select: { name: true } } },
       orderBy: { date: "desc" },
     })
-    csv = toCSV(
+    csv = toCsv(
       ["Date", "Donor", "Amount (PKR)", "Context", "Type", "Designated For", "Method", "Notes", "Recorded By"],
       rows.map((r) => [
         new Date(r.date).toISOString().slice(0, 10),
@@ -44,7 +37,7 @@ export async function GET(req: NextRequest) {
       include: { recipient: true, donation: { select: { paymentContext: true } }, recordedBy: { select: { name: true } } },
       orderBy: { date: "desc" },
     })
-    csv = toCSV(
+    csv = toCsv(
       ["Date", "Recipient", "Amount (PKR)", "Purpose", "Source", "Notes", "Recorded By"],
       rows.map((r) => [
         new Date(r.date).toISOString().slice(0, 10),
@@ -62,7 +55,7 @@ export async function GET(req: NextRequest) {
       where: { deletedAt: null },
       orderBy: { name: "asc" },
     })
-    csv = toCSV(
+    csv = toCsv(
       ["Name", "Anonymous", "Phone", "Email", "Address", "Recurring", "Notes"],
       rows.map((r) => [r.name ?? "Anonymous", r.isAnonymous ? "Yes" : "No", r.phone ?? "", r.email ?? "", r.address ?? "", r.isRecurring ? "Yes" : "No", r.notes ?? ""])
     )
@@ -72,7 +65,7 @@ export async function GET(req: NextRequest) {
       where: { deletedAt: null },
       orderBy: { name: "asc" },
     })
-    csv = toCSV(
+    csv = toCsv(
       ["Name", "Category", "Phone", "Address", "Active", "Notes"],
       rows.map((r) => [r.name, r.category, r.phone ?? "", r.address ?? "", r.isActive ? "Yes" : "No", r.notes ?? ""])
     )
@@ -81,10 +74,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid type" }, { status: 400 })
   }
 
-  return new NextResponse(csv, {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
-  })
+  return csvResponse(filename, csv)
 }

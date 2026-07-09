@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation"
-import { requireSession, canWrite } from "@/lib/permissions"
+import { requireAuth, canModify } from "@/lib/permissions"
 import { createRecipient } from "../actions"
 import { RecipientForm } from "@/components/recipients/recipient-form"
 import { Topbar } from "@/components/layout/topbar"
 
 export default async function NewRecipientPage() {
-  const session = await requireSession()
-  if (!canWrite(session)) redirect("/recipients")
+  const session = await requireAuth()
+  if (!canModify(session)) redirect("/recipients")
   return (
     <>
       <Topbar title="Add Recipient" />

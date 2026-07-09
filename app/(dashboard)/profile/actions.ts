@@ -1,6 +1,6 @@
 "use server"
 import { db } from "@/lib/db"
-import { requireSession } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { hash, compare } from "bcryptjs"
 import { z } from "zod"
 
@@ -10,7 +10,7 @@ const ChangePasswordSchema = z.object({
 })
 
 export async function changePassword(data: z.infer<typeof ChangePasswordSchema>) {
-  const session = await requireSession()
+  const session = await requireAuth()
   const parsed = ChangePasswordSchema.parse(data)
   const user = await db.user.findUniqueOrThrow({ where: { id: session.user.id } })
   const valid = await compare(parsed.currentPassword, user.passwordHash)

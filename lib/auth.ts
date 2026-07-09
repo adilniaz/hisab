@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import { db } from "@/lib/db"
+import { checkRateLimit } from "@/lib/rate-limit"
 import type { Role, ScopeType } from "@prisma/client"
 
 declare module "next-auth" {
@@ -22,6 +23,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: { email: {}, password: {} },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
+        const { allowed } = checkRateLimit(`login:${String(credentials.email)}`)
+        if (!allowed) return null
         const user = await db.user.findUnique({
           where: { email: String(credentials.email) },
         })
@@ -52,6 +55,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = token.role as Role
       session.user.scopeType = token.scopeType as ScopeType
       return session
+    },
+    async authorized({ auth }) {
+      if (!auth?.user?.email) return false
+      const user = await db.user.findUnique({
+        where: { email: auth.user.email },
+        select: { id: true },
+      })
+      return !!user
     },
   },
 })

@@ -1,9 +1,9 @@
 "use server"
 import { db } from "@/lib/db"
-import { requireSession } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 
 export async function getDonorStatement(donorId: string) {
-  await requireSession()
+  await requireAuth()
   return db.donor.findUniqueOrThrow({
     where: { id: donorId },
     include: {
@@ -20,7 +20,7 @@ export async function getDonorStatement(donorId: string) {
 }
 
 export async function getRecipientHistory(recipientId: string) {
-  await requireSession()
+  await requireAuth()
   return db.recipient.findUniqueOrThrow({
     where: { id: recipientId },
     include: {
@@ -36,7 +36,7 @@ export async function getRecipientHistory(recipientId: string) {
 }
 
 export async function getAuditReport(from: string, to: string) {
-  await requireSession()
+  await requireAuth()
   const where = { date: { gte: new Date(from), lte: new Date(to) } }
   const [donations, distributions] = await Promise.all([
     db.donation.findMany({ where, include: { donor: true }, orderBy: { date: "asc" } }),
@@ -46,7 +46,7 @@ export async function getAuditReport(from: string, to: string) {
 }
 
 export async function getAllDonors() {
-  await requireSession()
+  await requireAuth()
   return db.donor.findMany({
     select: { id: true, name: true, isAnonymous: true },
     orderBy: { name: "asc" },
@@ -54,7 +54,7 @@ export async function getAllDonors() {
 }
 
 export async function getAllRecipients() {
-  await requireSession()
+  await requireAuth()
   return db.recipient.findMany({
     where: { isActive: true },
     select: { id: true, name: true },

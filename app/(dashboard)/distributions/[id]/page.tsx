@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { getDistribution, deleteDistribution } from "../actions"
-import { requireSession } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { Topbar } from "@/components/layout/topbar"
 import { Badge } from "@/components/ui/badge"
 import { DeleteButton } from "@/components/ui/delete-button"
@@ -10,7 +10,7 @@ import Link from "next/link"
 
 export default async function DistributionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [distribution, session] = await Promise.all([getDistribution(id), requireSession()])
+  const [distribution, session] = await Promise.all([getDistribution(id), requireAuth()])
   if (!distribution) notFound()
   const isAdmin = session.user.role === "ADMIN"
 

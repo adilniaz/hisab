@@ -2,13 +2,13 @@ import { notFound, redirect } from "next/navigation"
 import { getDonor, updateDonor } from "../../actions"
 import { DonorForm } from "@/components/donors/donor-form"
 import { Topbar } from "@/components/layout/topbar"
-import { requireSession, canWrite } from "@/lib/permissions"
+import { requireAuth, canModify } from "@/lib/permissions"
 
 export default async function DonorEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [donor, session] = await Promise.all([getDonor(id), requireSession()])
+  const [donor, session] = await Promise.all([getDonor(id), requireAuth()])
   if (!donor) notFound()
-  if (!canWrite(session)) redirect(`/donors/${id}`)
+  if (!canModify(session)) redirect(`/donors/${id}`)
 
   return (
     <>

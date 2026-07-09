@@ -6,11 +6,11 @@ import { DeleteButton } from "@/components/ui/delete-button"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { requireSession, canWrite } from "@/lib/permissions"
+import { requireAuth, canModify } from "@/lib/permissions"
 
 export default async function RecipientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [recipient, session] = await Promise.all([getRecipient(id), requireSession()])
+  const [recipient, session] = await Promise.all([getRecipient(id), requireAuth()])
   if (!recipient) notFound()
 
   const total = recipient.distributions.reduce((s, d) => s + Number(d.amount), 0)
@@ -20,7 +20,7 @@ export default async function RecipientDetailPage({ params }: { params: Promise<
     <>
       <Topbar title={recipient.name} />
       <div className="p-6 space-y-6">
-        {canWrite(session) && (
+        {canModify(session) && (
           <div className="flex gap-2">
             <Link href={`/recipients/${id}/edit`} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
               Edit

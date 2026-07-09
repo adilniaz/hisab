@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest"
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }))
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }))
 
-import { canWrite, donorFilter, recipientFilter } from "@/lib/permissions"
+import { canModify, donorFilter, recipientFilter } from "@/lib/permissions"
 import type { Session } from "next-auth"
 
 function mkSession(role: string, scopeType: string): Session {
@@ -13,10 +13,10 @@ function mkSession(role: string, scopeType: string): Session {
   }
 }
 
-describe("canWrite", () => {
-  it("true for ADMIN", () => expect(canWrite(mkSession("ADMIN", "ALL"))).toBe(true))
-  it("true for DATA_ENTRY", () => expect(canWrite(mkSession("DATA_ENTRY", "ALL"))).toBe(true))
-  it("false for VIEWER", () => expect(canWrite(mkSession("VIEWER", "ALL"))).toBe(false))
+describe("canModify", () => {
+  it("true for ADMIN", () => expect(canModify(mkSession("ADMIN", "ALL"))).toBe(true))
+  it("true for DATA_ENTRY", () => expect(canModify(mkSession("DATA_ENTRY", "ALL"))).toBe(true))
+  it("false for VIEWER", () => expect(canModify(mkSession("VIEWER", "ALL"))).toBe(false))
 })
 
 describe("donorFilter", () => {

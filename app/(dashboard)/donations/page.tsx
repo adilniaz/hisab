@@ -4,14 +4,14 @@ import { Topbar } from "@/components/layout/topbar"
 import { Button } from "@/components/ui/button"
 import { Pagination } from "@/components/ui/pagination"
 import Link from "next/link"
-import { requireSession, canWrite } from "@/lib/permissions"
+import { requireAuth, canModify } from "@/lib/permissions"
 
 export default async function DonationsPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; page?: string; from?: string; to?: string }>
 }) {
-  const session = await requireSession()
+  const session = await requireAuth()
   const { q, page: pageStr, from, to } = await searchParams
   const page = Number(pageStr ?? "1")
   const { items, total, pageSize } = await getDonations({ q, page, from, to })
@@ -41,7 +41,7 @@ export default async function DonationsPage({
             />
             <Button size="sm" variant="outline" type="submit">Filter</Button>
           </form>
-          {canWrite(session) && (
+          {canModify(session) && (
             <Link href="/donations/new">
               <Button size="sm">Record Donation</Button>
             </Link>

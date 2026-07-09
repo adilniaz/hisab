@@ -1,6 +1,6 @@
 "use server"
 import { db } from "@/lib/db"
-import { requireSession, requireAdmin, canWrite, donorFilter } from "@/lib/permissions"
+import { requireAuth, canModify, donorFilter } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
@@ -19,8 +19,8 @@ const DonationSchema = z.object({
 })
 
 export async function createDonation(data: z.infer<typeof DonationSchema>) {
-  const session = await requireSession()
-  if (!canWrite(session)) throw new Error("Unauthorized")
+  const session = await requireAuth()
+  if (!canModify(session)) throw new Error("Unauthorized")
   const parsed = DonationSchema.parse(data)
   await db.donation.create({
     data: {
@@ -40,7 +40,7 @@ export async function createDonation(data: z.infer<typeof DonationSchema>) {
 }
 
 export async function updateDonation(id: string, data: z.infer<typeof DonationSchema>) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const parsed = DonationSchema.parse(data)
   await db.donation.update({
     where: { id },
@@ -61,14 +61,14 @@ export async function updateDonation(id: string, data: z.infer<typeof DonationSc
 }
 
 export async function deleteDonation(id: string) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   await db.donation.update({ where: { id }, data: { deletedAt: new Date() } })
   revalidatePath("/donations")
   revalidatePath("/overview")
 }
 
 export async function getDonations(params: { page?: number; q?: string; from?: string; to?: string } = {}) {
-  const session = await requireSession()
+  const session = await requireAuth()
   const scopeWhere = donorFilter(session)
   const page = params.page ?? 1
   const donorWhere = {
@@ -103,7 +103,7 @@ export async function getDonations(params: { page?: number; q?: string; from?: s
 }
 
 export async function getDonation(id: string) {
-  await requireSession()
+  await requireAuth()
   return db.donation.findFirst({
     where: { id, deletedAt: null },
     include: {
@@ -116,7 +116,7 @@ export async function getDonation(id: string) {
 }
 
 export async function getDonorsForPicker() {
-  const session = await requireSession()
+  const session = await requireAuth()
   const scopeWhere = donorFilter(session)
   return db.donor.findMany({
     where: { deletedAt: null, ...scopeWhere },

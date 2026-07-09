@@ -3,19 +3,16 @@ import { redirect } from "next/navigation"
 import type { Session } from "next-auth"
 import type { Prisma } from "@prisma/client"
 
-export async function requireSession(): Promise<Session> {
+export async function requireAuth(opts?: { roles?: string[] }): Promise<Session> {
   const session = await auth()
   if (!session) redirect("/login")
+  if (opts?.roles && opts.roles.length > 0 && !opts.roles.includes(session.user.role)) {
+    redirect("/overview")
+  }
   return session
 }
 
-export async function requireAdmin(): Promise<Session> {
-  const session = await requireSession()
-  if (session.user.role !== "ADMIN") redirect("/overview")
-  return session
-}
-
-export function canWrite(session: Session): boolean {
+export function canModify(session: Session): boolean {
   return session.user.role === "ADMIN" || session.user.role === "DATA_ENTRY"
 }
 

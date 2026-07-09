@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { getUsers } from "./actions"
 import { UserTable } from "@/components/users/user-table"
 import { Topbar } from "@/components/layout/topbar"
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 export default async function UsersPage() {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const users = await getUsers()
   return (
     <>

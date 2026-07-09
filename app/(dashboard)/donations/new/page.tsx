@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation"
-import { requireSession, canWrite } from "@/lib/permissions"
+import { requireAuth, canModify } from "@/lib/permissions"
 import { createDonation, getDonorsForPicker } from "../actions"
 import { DonationForm } from "@/components/donations/donation-form"
 import { Topbar } from "@/components/layout/topbar"
 import { db } from "@/lib/db"
 
 export default async function NewDonationPage() {
-  const session = await requireSession()
-  if (!canWrite(session)) redirect("/donations")
+  const session = await requireAuth()
+  if (!canModify(session)) redirect("/donations")
   const [donors, recipients] = await Promise.all([
     getDonorsForPicker(),
     db.recipient.findMany({

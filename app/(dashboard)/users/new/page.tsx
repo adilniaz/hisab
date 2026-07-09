@@ -1,10 +1,10 @@
-import { requireAdmin } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { createUser } from "../actions"
 import { UserForm } from "@/components/users/user-form"
 import { Topbar } from "@/components/layout/topbar"
 
 export default async function NewUserPage() {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   return (
     <>
       <Topbar title="Add User" />

@@ -1,6 +1,6 @@
 "use server"
 import { db } from "@/lib/db"
-import { requireAdmin } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import { hash } from "bcryptjs"
 import { z } from "zod"
@@ -14,7 +14,7 @@ const UserSchema = z.object({
 })
 
 export async function createUser(data: z.infer<typeof UserSchema>) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const parsed = UserSchema.parse(data)
   if (!parsed.password) throw new Error("Password required for new users")
   const passwordHash = await hash(parsed.password, 12)
@@ -34,7 +34,7 @@ export async function updateUser(
   id: string,
   data: Omit<z.infer<typeof UserSchema>, "password"> & { password?: string }
 ) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const updateData: Record<string, unknown> = {
     name: data.name,
     email: data.email,
@@ -48,7 +48,7 @@ export async function updateUser(
 }
 
 export async function setUserScope(userId: string, donorIds: string[], recipientIds: string[]) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   await db.userScope.deleteMany({ where: { userId } })
   const rows = [
     ...donorIds.map((donorId) => ({ userId, donorId })),
@@ -59,7 +59,7 @@ export async function setUserScope(userId: string, donorIds: string[], recipient
 }
 
 export async function getUsers() {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   return db.user.findMany({
     orderBy: { createdAt: "asc" },
     include: { _count: { select: { userScopes: true } } },
@@ -67,7 +67,7 @@ export async function getUsers() {
 }
 
 export async function getUserWithScope(id: string) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   return db.user.findUnique({
     where: { id },
     include: {

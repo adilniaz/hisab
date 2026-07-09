@@ -6,11 +6,11 @@ import { DeleteButton } from "@/components/ui/delete-button"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { requireSession, canWrite } from "@/lib/permissions"
+import { requireAuth, canModify } from "@/lib/permissions"
 
 export default async function DonorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [donor, session] = await Promise.all([getDonor(id), requireSession()])
+  const [donor, session] = await Promise.all([getDonor(id), requireAuth()])
   if (!donor) notFound()
 
   const total = donor.donations.reduce((s, d) => s + Number(d.amount), 0)
@@ -20,7 +20,7 @@ export default async function DonorDetailPage({ params }: { params: Promise<{ id
     <>
       <Topbar title={donor.isAnonymous ? "Anonymous Donor" : (donor.name ?? "Donor")} />
       <div className="p-6 space-y-6">
-        {canWrite(session) && (
+        {canModify(session) && (
           <div className="flex gap-2">
             <Link href={`/donors/${id}/edit`} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
               Edit

@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation"
-import { requireAdmin } from "@/lib/permissions"
+import { requireAuth } from "@/lib/permissions"
 import { getDonation, getDonorsForPicker, updateDonation } from "../../actions"
 import { DonationForm } from "@/components/donations/donation-form"
 import { Topbar } from "@/components/layout/topbar"
 import { db } from "@/lib/db"
 
 export default async function EditDonationPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin()
+  await requireAuth({ roles: ['ADMIN'] })
   const { id } = await params
   const [donation, donors, recipients] = await Promise.all([
     getDonation(id),
