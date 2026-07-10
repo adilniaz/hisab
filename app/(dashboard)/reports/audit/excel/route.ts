@@ -51,7 +51,7 @@ export async function GET(req: Request) {
   distSheet.getRow(1).font = { bold: true }
 
   const buffer = await wb.xlsx.writeBuffer()
-  return new NextResponse(buffer as ArrayBuffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="audit-${from}-${to}.xlsx"`,

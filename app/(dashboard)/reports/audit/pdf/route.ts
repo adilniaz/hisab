@@ -100,7 +100,7 @@ export async function GET(req: Request) {
   )
 
   const buffer = await renderToBuffer(doc)
-  return new NextResponse(buffer as unknown as BodyInit, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="audit-${from}-${to}.pdf"`,
