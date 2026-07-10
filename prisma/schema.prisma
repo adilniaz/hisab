@@ -72,21 +72,25 @@ model Donor {
   deletedAt   DateTime?
   donations   Donation[]
   userScopes  UserScope[]
+
+  @@index([deletedAt])
 }
 
 model Recipient {
-  id                  String             @id @default(uuid())
+  id                  String            @id @default(uuid())
   name                String
   phone               String?
   address             String?
   category            RecipientCategory
   notes               String?
-  isActive            Boolean            @default(true)
-  createdAt           DateTime           @default(now())
+  isActive            Boolean           @default(true)
+  createdAt           DateTime          @default(now())
   deletedAt           DateTime?
   distributions       Distribution[]
-  designatedDonations Donation[]         @relation("DesignatedRecipient")
+  designatedDonations Donation[]        @relation("DesignatedRecipient")
   userScopes          UserScope[]
+
+  @@index([deletedAt])
 }
 
 model Donation {
@@ -106,6 +110,12 @@ model Donation {
   createdAt             DateTime       @default(now())
   deletedAt             DateTime?
   distributions         Distribution[]
+
+  @@index([donorId])
+  @@index([designatedRecipientId])
+  @@index([recordedById])
+  @@index([date])
+  @@index([deletedAt])
 }
 
 model Distribution {
@@ -122,6 +132,12 @@ model Distribution {
   recordedBy   User      @relation("RecordedDistributions", fields: [recordedById], references: [id])
   createdAt    DateTime  @default(now())
   deletedAt    DateTime?
+
+  @@index([recipientId])
+  @@index([donationId])
+  @@index([recordedById])
+  @@index([date])
+  @@index([deletedAt])
 }
 
 model UserScope {
@@ -132,4 +148,8 @@ model UserScope {
   donor       Donor?     @relation(fields: [donorId], references: [id], onDelete: Cascade)
   recipientId String?
   recipient   Recipient? @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([donorId])
+  @@index([recipientId])
 }
