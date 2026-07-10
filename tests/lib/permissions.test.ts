@@ -1,10 +1,20 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }))
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }))
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn((url: string) => {
+    throw new Error(`REDIRECT:${url}`)
+  }),
+}))
 
-import { canModify, donorFilter, recipientFilter } from "@/lib/permissions"
+import { auth } from "@/lib/auth"
+import { requireAuth, canModify, donorFilter, recipientFilter } from "@/lib/permissions"
 import type { Session } from "next-auth"
+
+// auth() has overloaded (middleware-style vs. plain) call signatures that
+// confuse vi.mocked()'s overload resolution; a single cast here keeps every
+// test below free of per-call `any`.
+const mockAuth = auth as unknown as ReturnType<typeof vi.fn>
 
 function mkSession(role: string, scopeType: string): Session {
   return {
@@ -12,6 +22,32 @@ function mkSession(role: string, scopeType: string): Session {
     expires: "2099-01-01",
   }
 }
+
+describe("requireAuth", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("redirects to /login when there is no session", async () => {
+    mockAuth.mockResolvedValue(null)
+    await expect(requireAuth()).rejects.toThrow("REDIRECT:/login")
+  })
+
+  it("returns the session when no roles are required", async () => {
+    const session = mkSession("VIEWER", "ALL")
+    mockAuth.mockResolvedValue(session)
+    await expect(requireAuth()).resolves.toBe(session)
+  })
+
+  it("returns the session when the caller's role is allowed", async () => {
+    const session = mkSession("ADMIN", "ALL")
+    mockAuth.mockResolvedValue(session)
+    await expect(requireAuth({ roles: ["ADMIN"] })).resolves.toBe(session)
+  })
+
+  it("redirects to /overview when the caller's role isn't allowed", async () => {
+    mockAuth.mockResolvedValue(mkSession("VIEWER", "ALL"))
+    await expect(requireAuth({ roles: ["ADMIN"] })).rejects.toThrow("REDIRECT:/overview")
+  })
+})
 
 describe("canModify", () => {
   it("true for ADMIN", () => expect(canModify(mkSession("ADMIN", "ALL"))).toBe(true))
