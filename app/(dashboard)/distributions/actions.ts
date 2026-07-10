@@ -145,13 +145,23 @@ export async function getDesignatedDonationsForRecipient(recipientId: string) {
   await requireAuth()
   const donations = await db.donation.findMany({
     where: { type: "DESIGNATED", designatedRecipientId: recipientId, deletedAt: null },
-    include: { distributions: { where: { deletedAt: null }, select: { amount: true } } },
+    select: { id: true, amount: true, date: true },
   })
+  if (donations.length === 0) return []
+
+  const spentByDonation = await db.distribution.groupBy({
+    by: ["donationId"],
+    where: { donationId: { in: donations.map((d) => d.id) }, deletedAt: null },
+    _sum: { amount: true },
+  })
+  const spentMap = new Map(spentByDonation.map((s) => [s.donationId, Number(s._sum.amount ?? 0)]))
+
   return donations
-    .map((d) => {
-      const spent = d.distributions.reduce((s, dist) => s + Number(dist.amount), 0)
-      const remaining = Math.max(0, Number(d.amount) - spent)
-      return { id: d.id, amount: Number(d.amount), remaining, date: d.date }
-    })
+    .map((d) => ({
+      id: d.id,
+      amount: Number(d.amount),
+      remaining: Math.max(0, Number(d.amount) - (spentMap.get(d.id) ?? 0)),
+      date: d.date,
+    }))
     .filter((d) => d.remaining > 0)
 }
