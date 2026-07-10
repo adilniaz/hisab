@@ -16,6 +16,7 @@ vi.mock("@/lib/permissions", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
 import { db } from "@/lib/db"
+import { canModify } from "@/lib/permissions"
 import {
   createDistribution,
   updateDistribution,
@@ -28,6 +29,24 @@ const baseInput = {
   purpose: "Medicine",
   notes: "",
 }
+
+describe("createDistribution — canModify enforcement", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("rejects a VIEWER session before touching the database", async () => {
+    // mockReturnValueOnce so this doesn't leak into other describe blocks,
+    // which rely on the module mock's default canModify() === true.
+    vi.mocked(canModify).mockReturnValueOnce(false)
+    await expect(
+      createDistribution({
+        ...baseInput,
+        amount: 1000,
+        donationId: "a1b2c3d4-e5f6-4a7b-8c9d-000000000002",
+      })
+    ).rejects.toThrow("Unauthorized")
+    expect(db.$transaction).not.toHaveBeenCalled()
+  })
+})
 
 describe("createDistribution — designated donation balance guard", () => {
   beforeEach(() => vi.clearAllMocks())
