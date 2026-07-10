@@ -12,14 +12,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { getErrorMessage } from "@/lib/utils"
 
 const schema = z.object({
-  donorId: z.string().optional(),
+  donorId: z.string().uuid().optional().or(z.literal("")),
   isAnonymous: z.boolean().default(false),
   amount: z.number().positive("Amount must be positive"),
   date: z.string().min(1, "Date required"),
   paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "EASYPAISA", "JAZZCASH", "OTHER"]),
   paymentContext: z.enum(["ZAKAT", "SADAQAH", "GENERAL", "OTHER"]),
   type: z.enum(["POOLED", "DESIGNATED"]),
-  designatedRecipientId: z.string().optional(),
+  designatedRecipientId: z.string().uuid().optional().or(z.literal("")),
   notes: z.string().optional(),
 })
 type Fields = z.infer<typeof schema>

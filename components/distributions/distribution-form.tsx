@@ -13,11 +13,11 @@ import { getDesignatedDonationsForRecipient } from "@/app/(dashboard)/distributi
 import { getErrorMessage } from "@/lib/utils"
 
 const schema = z.object({
-  recipientId: z.string().min(1, "Select a recipient"),
+  recipientId: z.string().uuid("Select a recipient"),
   amount: z.number().positive("Amount must be positive"),
   date: z.string().min(1, "Date required"),
   purpose: z.string().min(1, "Purpose required"),
-  donationId: z.string().optional(),
+  donationId: z.string().uuid().optional().or(z.literal("")),
   notes: z.string().optional(),
 })
 type Fields = z.infer<typeof schema>
