@@ -117,9 +117,14 @@ export async function getDistributions(params: { page?: number; q?: string } = {
 }
 
 export async function getDistribution(id: string) {
-  await requireAuth()
+  const session = await requireAuth()
+  const scopeWhere = recipientFilter(session)
   return db.distribution.findFirst({
-    where: { id, deletedAt: null },
+    where: {
+      id,
+      deletedAt: null,
+      ...(Object.keys(scopeWhere).length ? { recipient: scopeWhere } : {}),
+    },
     include: {
       recipient: true,
       donation: { select: { id: true, paymentContext: true, donor: { select: { name: true } } } },

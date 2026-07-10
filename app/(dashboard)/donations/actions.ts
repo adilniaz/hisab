@@ -103,9 +103,14 @@ export async function getDonations(params: { page?: number; q?: string; from?: s
 }
 
 export async function getDonation(id: string) {
-  await requireAuth()
+  const session = await requireAuth()
+  const scopeWhere = donorFilter(session)
   return db.donation.findFirst({
-    where: { id, deletedAt: null },
+    where: {
+      id,
+      deletedAt: null,
+      ...(Object.keys(scopeWhere).length ? { donor: scopeWhere } : {}),
+    },
     include: {
       donor: true,
       designatedRecipient: true,
