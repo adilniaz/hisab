@@ -49,12 +49,14 @@ export async function updateUser(
 
 export async function setUserScope(userId: string, donorIds: string[], recipientIds: string[]) {
   await requireAuth({ roles: ['ADMIN'] })
-  await db.userScope.deleteMany({ where: { userId } })
   const rows = [
     ...donorIds.map((donorId) => ({ userId, donorId })),
     ...recipientIds.map((recipientId) => ({ userId, recipientId })),
   ]
-  if (rows.length) await db.userScope.createMany({ data: rows })
+  await db.$transaction([
+    db.userScope.deleteMany({ where: { userId } }),
+    ...(rows.length ? [db.userScope.createMany({ data: rows })] : []),
+  ])
   revalidatePath(`/users/${userId}`)
 }
 

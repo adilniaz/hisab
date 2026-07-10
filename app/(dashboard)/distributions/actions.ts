@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { requireAuth, canModify, recipientFilter } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import type { Prisma } from "@prisma/client"
 
 const PAGE_SIZE = 25
 
@@ -15,35 +16,70 @@ const DistributionSchema = z.object({
   notes: z.string().optional(),
 })
 
+async function assertWithinBalance(
+  tx: Prisma.TransactionClient,
+  donationId: string | undefined,
+  amount: number,
+  excludeDistributionId?: string
+) {
+  if (donationId) {
+    const donation = await tx.donation.findUniqueOrThrow({
+      where: { id: donationId },
+      include: {
+        distributions: {
+          where: { deletedAt: null, ...(excludeDistributionId ? { id: { not: excludeDistributionId } } : {}) },
+          select: { amount: true },
+        },
+      },
+    })
+    const spent = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
+    const remaining = Math.max(0, Number(donation.amount) - spent)
+    if (amount > remaining) {
+      throw new Error(`Amount PKR ${amount} exceeds remaining balance of PKR ${remaining} on this donation`)
+    }
+    return
+  }
+
+  const [pooled, distributed] = await Promise.all([
+    tx.donation.aggregate({ _sum: { amount: true }, where: { type: "POOLED", deletedAt: null } }),
+    tx.distribution.aggregate({
+      _sum: { amount: true },
+      where: {
+        donationId: null,
+        deletedAt: null,
+        ...(excludeDistributionId ? { id: { not: excludeDistributionId } } : {}),
+      },
+    }),
+  ])
+  const remaining = Number(pooled._sum.amount ?? 0) - Number(distributed._sum.amount ?? 0)
+  if (amount > remaining) {
+    throw new Error(`Amount PKR ${amount} exceeds remaining pool balance of PKR ${remaining}`)
+  }
+}
+
 export async function createDistribution(data: z.infer<typeof DistributionSchema>) {
   const session = await requireAuth()
   if (!canModify(session)) throw new Error("Unauthorized")
   const parsed = DistributionSchema.parse(data)
   const donationId = parsed.donationId || undefined
 
-  if (donationId) {
-    const donation = await db.donation.findUniqueOrThrow({
-      where: { id: donationId },
-      include: { distributions: { where: { deletedAt: null }, select: { amount: true } } },
-    })
-    const spent = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
-    const remaining = Math.max(0, Number(donation.amount) - spent)
-    if (parsed.amount > remaining) {
-      throw new Error(`Amount PKR ${parsed.amount} exceeds remaining balance of PKR ${remaining} on this donation`)
-    }
-  }
-
-  await db.distribution.create({
-    data: {
-      recipientId: parsed.recipientId,
-      amount: parsed.amount,
-      date: new Date(parsed.date),
-      purpose: parsed.purpose,
-      donationId: donationId ?? null,
-      notes: parsed.notes,
-      recordedById: session.user.id,
+  await db.$transaction(
+    async (tx) => {
+      await assertWithinBalance(tx, donationId, parsed.amount)
+      await tx.distribution.create({
+        data: {
+          recipientId: parsed.recipientId,
+          amount: parsed.amount,
+          date: new Date(parsed.date),
+          purpose: parsed.purpose,
+          donationId: donationId ?? null,
+          notes: parsed.notes,
+          recordedById: session.user.id,
+        },
+      })
     },
-  })
+    { isolationLevel: "Serializable" }
+  )
   revalidatePath("/distributions")
   revalidatePath("/overview")
 }
@@ -53,29 +89,23 @@ export async function updateDistribution(id: string, data: z.infer<typeof Distri
   const parsed = DistributionSchema.parse(data)
   const donationId = parsed.donationId || undefined
 
-  if (donationId) {
-    const donation = await db.donation.findUniqueOrThrow({
-      where: { id: donationId },
-      include: { distributions: { where: { id: { not: id }, deletedAt: null }, select: { amount: true } } },
-    })
-    const spent = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
-    const remaining = Math.max(0, Number(donation.amount) - spent)
-    if (parsed.amount > remaining) {
-      throw new Error(`Amount PKR ${parsed.amount} exceeds remaining balance of PKR ${remaining}`)
-    }
-  }
-
-  await db.distribution.update({
-    where: { id },
-    data: {
-      recipientId: parsed.recipientId,
-      amount: parsed.amount,
-      date: new Date(parsed.date),
-      purpose: parsed.purpose,
-      donationId: donationId ?? null,
-      notes: parsed.notes,
+  await db.$transaction(
+    async (tx) => {
+      await assertWithinBalance(tx, donationId, parsed.amount, id)
+      await tx.distribution.update({
+        where: { id },
+        data: {
+          recipientId: parsed.recipientId,
+          amount: parsed.amount,
+          date: new Date(parsed.date),
+          purpose: parsed.purpose,
+          donationId: donationId ?? null,
+          notes: parsed.notes,
+        },
+      })
     },
-  })
+    { isolationLevel: "Serializable" }
+  )
   revalidatePath("/distributions")
   revalidatePath("/overview")
 }
