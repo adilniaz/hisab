@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { getErrorMessage } from "@/lib/utils"
 
 const schema = z.object({
   name: z.string().optional(),
@@ -44,9 +45,10 @@ export function DonorForm({ onSubmit, defaultValues }: DonorFormProps) {
           await onSubmit(data)
           toast.success("Donor saved")
           router.push("/donors")
-        } catch (e: any) {
-          setServerError(e.message)
-          toast.error(e.message)
+        } catch (e) {
+          const message = getErrorMessage(e)
+          setServerError(message)
+          toast.error(message)
         }
       })}
       className="space-y-4 max-w-lg"

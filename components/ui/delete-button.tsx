@@ -3,6 +3,7 @@ import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "./button"
+import { getErrorMessage } from "@/lib/utils"
 
 export function DeleteButton({
   action,
@@ -23,8 +24,8 @@ export function DeleteButton({
         await action()
         toast.success(`${noun} deleted`)
         if (redirectTo) router.push(redirectTo)
-      } catch (e: any) {
-        toast.error(e.message ?? "Something went wrong")
+      } catch (e) {
+        toast.error(getErrorMessage(e))
       }
     })
   }

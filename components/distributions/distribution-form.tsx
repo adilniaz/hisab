@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getDesignatedDonationsForRecipient } from "@/app/(dashboard)/distributions/actions"
+import { getErrorMessage } from "@/lib/utils"
 
 const schema = z.object({
   recipientId: z.string().min(1, "Select a recipient"),
@@ -60,9 +61,10 @@ export function DistributionForm({
           await onSubmit(data)
           toast.success("Distribution saved")
           router.push("/distributions")
-        } catch (e: any) {
-          setServerError(e.message)
-          toast.error(e.message)
+        } catch (e) {
+          const message = getErrorMessage(e)
+          setServerError(message)
+          toast.error(message)
         }
       })}
       className="space-y-4 max-w-lg"

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { setUserScope } from "@/app/(dashboard)/users/actions"
+import { getErrorMessage } from "@/lib/utils"
 
 interface Donor { id: string; name: string | null; isAnonymous: boolean }
 interface Recipient { id: string; name: string }
@@ -69,8 +70,8 @@ export function UserForm({
         await setUserScope(userId, selectedDonors, selectedRecipients)
       }
       router.push("/users")
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e) {
+      setError(getErrorMessage(e))
     }
     setLoading(false)
   }
