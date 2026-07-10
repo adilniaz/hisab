@@ -35,7 +35,7 @@ export function DonorForm({ onSubmit, defaultValues }: DonorFormProps) {
     handleSubmit,
     watch,
     formState: { isSubmitting },
-  } = useForm<z.input<typeof schema>, any, Fields>({ resolver: zodResolver(schema), defaultValues })
+  } = useForm<z.input<typeof schema>, unknown, Fields>({ resolver: zodResolver(schema), defaultValues })
   const isAnonymous = watch("isAnonymous")
 
   return (

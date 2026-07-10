@@ -35,7 +35,7 @@ export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
 }) {
   const router = useRouter()
   const [serverError, setServerError] = useState("")
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<z.input<typeof schema>, any, Fields>({
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<z.input<typeof schema>, unknown, Fields>({
     resolver: zodResolver(schema),
     defaultValues: {
       date: new Date().toISOString().slice(0, 10),

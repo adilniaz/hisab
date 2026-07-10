@@ -18,7 +18,7 @@ describe("setUserScope — atomicity", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("wraps the delete and recreate in a single transaction", async () => {
-    vi.mocked(db.$transaction).mockResolvedValue([] as any)
+    vi.mocked(db.$transaction).mockResolvedValue([])
     await setUserScope("user-1", ["donor-1"], ["recipient-1"])
     expect(db.$transaction).toHaveBeenCalledTimes(1)
     const ops = vi.mocked(db.$transaction).mock.calls[0]![0] as unknown as unknown[]
@@ -33,7 +33,7 @@ describe("setUserScope — atomicity", () => {
   })
 
   it("still deletes existing scope when the new scope is empty, without a dangling createMany call", async () => {
-    vi.mocked(db.$transaction).mockResolvedValue([] as any)
+    vi.mocked(db.$transaction).mockResolvedValue([])
     await setUserScope("user-1", [], [])
     const ops = vi.mocked(db.$transaction).mock.calls[0]![0] as unknown as unknown[]
     expect(ops).toHaveLength(1)

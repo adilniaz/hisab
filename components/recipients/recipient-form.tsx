@@ -27,7 +27,7 @@ export function RecipientForm({ onSubmit, defaultValues }: {
 }) {
   const router = useRouter()
   const [serverError, setServerError] = useState("")
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<z.input<typeof schema>, any, Fields>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<z.input<typeof schema>, unknown, Fields>({
     resolver: zodResolver(schema),
     defaultValues: { isActive: true, category: "OTHER", ...defaultValues },
   })

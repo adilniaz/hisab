@@ -9,19 +9,12 @@ vi.mock("next/navigation", () => ({
 
 import { auth } from "@/lib/auth"
 import { requireAuth, canModify, donorFilter, recipientFilter } from "@/lib/permissions"
-import type { Session } from "next-auth"
+import { mkSession } from "@/tests/helpers/session"
 
 // auth() has overloaded (middleware-style vs. plain) call signatures that
 // confuse vi.mocked()'s overload resolution; a single cast here keeps every
 // test below free of per-call `any`.
 const mockAuth = auth as unknown as ReturnType<typeof vi.fn>
-
-function mkSession(role: string, scopeType: string): Session {
-  return {
-    user: { id: "u1", name: "T", email: "t@t.com", role, scopeType } as any,
-    expires: "2099-01-01",
-  }
-}
 
 describe("requireAuth", () => {
   beforeEach(() => vi.clearAllMocks())

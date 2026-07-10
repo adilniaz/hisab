@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
 vi.mock("@/lib/db", () => {
-  const db: any = {
+  const mockDb = {
     donation: { findUniqueOrThrow: vi.fn(), aggregate: vi.fn(), findMany: vi.fn() },
     distribution: { create: vi.fn(), update: vi.fn(), aggregate: vi.fn(), groupBy: vi.fn() },
   }
-  db.$transaction = vi.fn((cb: any) => cb(db))
-  return { db }
+  return {
+    db: {
+      ...mockDb,
+      $transaction: vi.fn((cb: (tx: typeof mockDb) => unknown) => cb(mockDb)),
+    },
+  }
 })
 vi.mock("@/lib/permissions", () => ({
   requireAuth: vi.fn().mockResolvedValue({ user: { id: "u1", role: "ADMIN", scopeType: "ALL" } }),
@@ -70,7 +74,6 @@ describe("createDistribution — designated donation balance guard", () => {
       amount: 5000,
       distributions: [{ amount: 4000 }],
     } as any)
-    vi.mocked(db.distribution.create).mockResolvedValue({} as any)
     await expect(
       createDistribution({
         ...baseInput,
@@ -82,7 +85,6 @@ describe("createDistribution — designated donation balance guard", () => {
 
   it("runs the balance check and write inside a single Serializable transaction", async () => {
     vi.mocked(db.donation.findUniqueOrThrow).mockResolvedValue({ amount: 5000, distributions: [] } as any)
-    vi.mocked(db.distribution.create).mockResolvedValue({} as any)
     await createDistribution({
       ...baseInput,
       amount: 1000,
@@ -106,7 +108,6 @@ describe("createDistribution — pool balance guard", () => {
   it("allows a pool distribution within the pool balance", async () => {
     vi.mocked(db.donation.aggregate).mockResolvedValue({ _sum: { amount: 5000 } } as any)
     vi.mocked(db.distribution.aggregate).mockResolvedValue({ _sum: { amount: 4000 } } as any)
-    vi.mocked(db.distribution.create).mockResolvedValue({} as any)
     await expect(
       createDistribution({ ...baseInput, amount: 1000, donationId: "" })
     ).resolves.not.toThrow()
@@ -132,7 +133,6 @@ describe("updateDistribution — balance guard", () => {
 
   it("excludes the distribution's own prior amount from the designated-donation check", async () => {
     vi.mocked(db.donation.findUniqueOrThrow).mockResolvedValue({ amount: 5000, distributions: [] } as any)
-    vi.mocked(db.distribution.update).mockResolvedValue({} as any)
     await updateDistribution("dist-1", {
       ...baseInput,
       amount: 3000,
@@ -152,7 +152,6 @@ describe("updateDistribution — balance guard", () => {
   it("excludes the distribution's own prior amount from the pool check", async () => {
     vi.mocked(db.donation.aggregate).mockResolvedValue({ _sum: { amount: 5000 } } as any)
     vi.mocked(db.distribution.aggregate).mockResolvedValue({ _sum: { amount: 4000 } } as any)
-    vi.mocked(db.distribution.update).mockResolvedValue({} as any)
     await updateDistribution("dist-1", { ...baseInput, amount: 1000, donationId: "" })
     expect(db.distribution.aggregate).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: { not: "dist-1" } }) })
