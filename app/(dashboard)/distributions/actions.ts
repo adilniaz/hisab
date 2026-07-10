@@ -1,6 +1,7 @@
 "use server"
 import { db } from "@/lib/db"
 import { requireAuth, canModify, recipientFilter } from "@/lib/permissions"
+import { getDonationRemainingBalance, getPoolBalance } from "@/lib/balance"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import type { Prisma } from "@prisma/client"
@@ -22,38 +23,15 @@ async function assertWithinBalance(
   amount: number,
   excludeDistributionId?: string
 ) {
-  if (donationId) {
-    const donation = await tx.donation.findUniqueOrThrow({
-      where: { id: donationId },
-      include: {
-        distributions: {
-          where: { deletedAt: null, ...(excludeDistributionId ? { id: { not: excludeDistributionId } } : {}) },
-          select: { amount: true },
-        },
-      },
-    })
-    const spent = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
-    const remaining = Math.max(0, Number(donation.amount) - spent)
-    if (amount > remaining) {
-      throw new Error(`Amount PKR ${amount} exceeds remaining balance of PKR ${remaining} on this donation`)
-    }
-    return
-  }
-
-  const [pooled, distributed] = await Promise.all([
-    tx.donation.aggregate({ _sum: { amount: true }, where: { type: "POOLED", deletedAt: null } }),
-    tx.distribution.aggregate({
-      _sum: { amount: true },
-      where: {
-        donationId: null,
-        deletedAt: null,
-        ...(excludeDistributionId ? { id: { not: excludeDistributionId } } : {}),
-      },
-    }),
-  ])
-  const remaining = Number(pooled._sum.amount ?? 0) - Number(distributed._sum.amount ?? 0)
+  const remaining = donationId
+    ? await getDonationRemainingBalance(donationId, tx, excludeDistributionId)
+    : await getPoolBalance(tx, excludeDistributionId)
   if (amount > remaining) {
-    throw new Error(`Amount PKR ${amount} exceeds remaining pool balance of PKR ${remaining}`)
+    throw new Error(
+      donationId
+        ? `Amount PKR ${amount} exceeds remaining balance of PKR ${remaining} on this donation`
+        : `Amount PKR ${amount} exceeds remaining pool balance of PKR ${remaining}`
+    )
   }
 }
 
