@@ -2,11 +2,14 @@
 import { signIn } from "@/lib/auth"
 import { AuthError } from "next-auth"
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit"
-import { headers } from "next/headers"
 
 export async function loginAction(email: string, password: string) {
-  const ip = (await headers()).get("x-forwarded-for") ?? "unknown"
-  const key = `login:${ip}`
+  // Keyed by email, not client IP: this app has no reverse proxy in front
+  // to strip client-supplied headers, so x-forwarded-for is attacker-controlled
+  // and unsuitable as a rate-limit key. authorize() in lib/auth.ts enforces
+  // the same account-scoped limit as the hard security boundary; this check
+  // just returns a friendlier error before hitting the credentials provider.
+  const key = `login:${email}`
   const { allowed } = checkRateLimit(key)
   if (!allowed) {
     return { error: "Too many login attempts. Please wait 15 minutes and try again." }

@@ -4,15 +4,15 @@ services:
     container_name: hisab-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: hisab
-      POSTGRES_PASSWORD: hisab
-      POSTGRES_DB: hisab
+      POSTGRES_USER: "${POSTGRES_USER:-hisab}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env, see .env.example}"
+      POSTGRES_DB: "${POSTGRES_DB:-hisab}"
     ports:
       - "5432:5432"
     volumes:
       - hisab-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hisab"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hisab}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -27,9 +27,9 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://hisab:hisab@postgres:5432/hisab
-      AUTH_SECRET: dev-secret-do-not-use-in-production
-      AUTH_URL: http://localhost:3000
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-hisab}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env, see .env.example}@postgres:5432/${POSTGRES_DB:-hisab}"
+      AUTH_SECRET: "${AUTH_SECRET:?Set AUTH_SECRET in .env, generate with openssl rand -hex 32}"
+      AUTH_URL: "${AUTH_URL:-http://localhost:3000}"
       NODE_ENV: production
     ports:
       - "3000:3000"
