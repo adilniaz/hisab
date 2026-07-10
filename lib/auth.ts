@@ -1,9 +1,13 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { compare } from "bcryptjs"
+import { compare, hashSync } from "bcryptjs"
 import { db } from "@/lib/db"
 import { checkRateLimit } from "@/lib/rate-limit"
 import type { Role, ScopeType } from "@prisma/client"
+
+// Used to keep authorize()'s response time consistent whether or not the
+// email exists, so timing can't be used to enumerate accounts.
+const DUMMY_HASH = hashSync("no-such-user-timing-safety", 12)
 
 declare module "next-auth" {
   interface Session {
@@ -28,9 +32,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await db.user.findUnique({
           where: { email: String(credentials.email) },
         })
-        if (!user) return null
-        const valid = await compare(String(credentials.password), user.passwordHash)
-        if (!valid) return null
+        const valid = await compare(String(credentials.password), user?.passwordHash ?? DUMMY_HASH)
+        if (!user || !valid) return null
         return {
           id: user.id,
           name: user.name,
