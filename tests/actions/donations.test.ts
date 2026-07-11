@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-vi.mock("@/lib/db", () => ({ db: { donation: { create: vi.fn() } } }))
+vi.mock("@/lib/prisma", () => ({ prisma: { donation: { create: vi.fn() } } }))
 vi.mock("@/lib/permissions", () => ({
   requireAuth: vi.fn(),
   canModify: vi.fn(),
@@ -8,10 +8,10 @@ vi.mock("@/lib/permissions", () => ({
 }))
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
-import { db } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 import { requireAuth, canModify } from "@/lib/permissions"
 import { createDonation } from "@/app/(dashboard)/donations/actions"
-import { mkSession } from "@/tests/helpers/session"
+import { mkSession } from "../helpers/session"
 
 const validInput = {
   donorId: "",
@@ -32,13 +32,13 @@ describe("createDonation — canModify enforcement", () => {
     vi.mocked(requireAuth).mockResolvedValue(mkSession("VIEWER", "ALL"))
     vi.mocked(canModify).mockReturnValue(false)
     await expect(createDonation(validInput)).rejects.toThrow("Unauthorized")
-    expect(db.donation.create).not.toHaveBeenCalled()
+    expect(prisma.donation.create).not.toHaveBeenCalled()
   })
 
   it("allows a DATA_ENTRY session", async () => {
     vi.mocked(requireAuth).mockResolvedValue(mkSession("DATA_ENTRY", "ALL"))
     vi.mocked(canModify).mockReturnValue(true)
     await expect(createDonation(validInput)).resolves.not.toThrow()
-    expect(db.donation.create).toHaveBeenCalled()
+    expect(prisma.donation.create).toHaveBeenCalled()
   })
 })

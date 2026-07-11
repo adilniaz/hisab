@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
 
 import { auth } from "@/lib/auth"
 import { requireAuth, canModify, donorFilter, recipientFilter } from "@/lib/permissions"
-import { mkSession } from "@/tests/helpers/session"
+import { mkSession } from "../helpers/session"
 
 // auth() has overloaded (middleware-style vs. plain) call signatures that
 // confuse vi.mocked()'s overload resolution; a single cast here keeps every

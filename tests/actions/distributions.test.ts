@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-vi.mock("@/lib/db", () => {
+vi.mock("@/lib/prisma", () => {
   const mockDb = {
     donation: { findUniqueOrThrow: vi.fn(), aggregate: vi.fn(), findMany: vi.fn() },
     distribution: { create: vi.fn(), update: vi.fn(), aggregate: vi.fn(), groupBy: vi.fn() },
   }
   return {
-    db: {
+    prisma: {
       ...mockDb,
       $transaction: vi.fn((cb: (tx: typeof mockDb) => unknown) => cb(mockDb)),
     },
@@ -19,7 +19,7 @@ vi.mock("@/lib/permissions", () => ({
 }))
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
-import { db } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 import { canModify } from "@/lib/permissions"
 import {
   createDistribution,
@@ -48,7 +48,7 @@ describe("createDistribution — canModify enforcement", () => {
         donationId: "a1b2c3d4-e5f6-4a7b-8c9d-000000000002",
       })
     ).rejects.toThrow("Unauthorized")
-    expect(db.$transaction).not.toHaveBeenCalled()
+    expect(prisma.$transaction).not.toHaveBeenCalled()
   })
 })
 
@@ -56,7 +56,7 @@ describe("createDistribution — designated donation balance guard", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("throws when amount exceeds designated donation remaining balance", async () => {
-    vi.mocked(db.donation.findUniqueOrThrow).mockResolvedValue({
+    vi.mocked(prisma.donation.findUniqueOrThrow).mockResolvedValue({
       amount: 5000,
       distributions: [{ amount: 4000 }],
     } as any)
@@ -70,7 +70,7 @@ describe("createDistribution — designated donation balance guard", () => {
   })
 
   it("allows distribution within remaining balance", async () => {
-    vi.mocked(db.donation.findUniqueOrThrow).mockResolvedValue({
+    vi.mocked(prisma.donation.findUniqueOrThrow).mockResolvedValue({
       amount: 5000,
       distributions: [{ amount: 4000 }],
     } as any)
@@ -84,13 +84,13 @@ describe("createDistribution — designated donation balance guard", () => {
   })
 
   it("runs the balance check and write inside a single Serializable transaction", async () => {
-    vi.mocked(db.donation.findUniqueOrThrow).mockResolvedValue({ amount: 5000, distributions: [] } as any)
+    vi.mocked(prisma.donation.findUniqueOrThrow).mockResolvedValue({ amount: 5000, distributions: [] } as any)
     await createDistribution({
       ...baseInput,
       amount: 1000,
       donationId: "a1b2c3d4-e5f6-4a7b-8c9d-000000000002",
     })
-    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" })
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" })
   })
 })
 
@@ -98,16 +98,16 @@ describe("createDistribution — pool balance guard", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("throws when a pool distribution exceeds the pool balance", async () => {
-    vi.mocked(db.donation.aggregate).mockResolvedValue({ _sum: { amount: 5000 } } as any)
-    vi.mocked(db.distribution.aggregate).mockResolvedValue({ _sum: { amount: 4000 } } as any)
+    vi.mocked(prisma.donation.aggregate).mockResolvedValue({ _sum: { amount: 5000 } } as any)
+    vi.mocked(prisma.distribution.aggregate).mockResolvedValue({ _sum: { amount: 4000 } } as any)
     await expect(
       createDistribution({ ...baseInput, amount: 2000, donationId: "" })
     ).rejects.toThrow("exceeds remaining pool balance")
   })
 
   it("allows a pool distribution within the pool balance", async () => {
-    vi.mocked(db.donation.aggregate).mockResolvedValue({ _sum: { amount: 5000 } } as any)
-    vi.mocked(db.distribution.aggregate).mockResolvedValue({ _sum: { amount: 4000 } } as any)
+    vi.mocked(prisma.donation.aggregate).mockResolvedValue({ _sum: { amount: 5000 } } as any)
+    vi.mocked(prisma.distribution.aggregate).mockResolvedValue({ _sum: { amount: 4000 } } as any)
     await expect(
       createDistribution({ ...baseInput, amount: 1000, donationId: "" })
     ).resolves.not.toThrow()
@@ -118,7 +118,7 @@ describe("updateDistribution — balance guard", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("throws when the new amount exceeds the designated donation's remaining balance", async () => {
-    vi.mocked(db.donation.findUniqueOrThrow).mockResolvedValue({
+    vi.mocked(prisma.donation.findUniqueOrThrow).mockResolvedValue({
       amount: 5000,
       distributions: [{ amount: 4000 }],
     } as any)
@@ -132,13 +132,13 @@ describe("updateDistribution — balance guard", () => {
   })
 
   it("excludes the distribution's own prior amount from the designated-donation check", async () => {
-    vi.mocked(db.donation.findUniqueOrThrow).mockResolvedValue({ amount: 5000, distributions: [] } as any)
+    vi.mocked(prisma.donation.findUniqueOrThrow).mockResolvedValue({ amount: 5000, distributions: [] } as any)
     await updateDistribution("dist-1", {
       ...baseInput,
       amount: 3000,
       donationId: "a1b2c3d4-e5f6-4a7b-8c9d-000000000002",
     })
-    expect(db.donation.findUniqueOrThrow).toHaveBeenCalledWith(
+    expect(prisma.donation.findUniqueOrThrow).toHaveBeenCalledWith(
       expect.objectContaining({
         include: expect.objectContaining({
           distributions: expect.objectContaining({
@@ -150,10 +150,10 @@ describe("updateDistribution — balance guard", () => {
   })
 
   it("excludes the distribution's own prior amount from the pool check", async () => {
-    vi.mocked(db.donation.aggregate).mockResolvedValue({ _sum: { amount: 5000 } } as any)
-    vi.mocked(db.distribution.aggregate).mockResolvedValue({ _sum: { amount: 4000 } } as any)
+    vi.mocked(prisma.donation.aggregate).mockResolvedValue({ _sum: { amount: 5000 } } as any)
+    vi.mocked(prisma.distribution.aggregate).mockResolvedValue({ _sum: { amount: 4000 } } as any)
     await updateDistribution("dist-1", { ...baseInput, amount: 1000, donationId: "" })
-    expect(db.distribution.aggregate).toHaveBeenCalledWith(
+    expect(prisma.distribution.aggregate).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: { not: "dist-1" } }) })
     )
   })
@@ -163,11 +163,11 @@ describe("getDesignatedDonationsForRecipient", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("returns remaining balance per donation via groupBy, not a full join", async () => {
-    vi.mocked(db.donation.findMany).mockResolvedValue([
+    vi.mocked(prisma.donation.findMany).mockResolvedValue([
       { id: "d1", amount: 5000, date: new Date("2026-01-01") },
       { id: "d2", amount: 3000, date: new Date("2026-01-02") },
     ] as any)
-    vi.mocked(db.distribution.groupBy).mockResolvedValue([
+    vi.mocked(prisma.distribution.groupBy).mockResolvedValue([
       { donationId: "d1", _sum: { amount: 2000 } },
     ] as any)
     const result = await getDesignatedDonationsForRecipient("recipient-1")
@@ -178,18 +178,18 @@ describe("getDesignatedDonationsForRecipient", () => {
   })
 
   it("filters out fully-spent donations", async () => {
-    vi.mocked(db.donation.findMany).mockResolvedValue([
+    vi.mocked(prisma.donation.findMany).mockResolvedValue([
       { id: "d1", amount: 1000, date: new Date("2026-01-01") },
     ] as any)
-    vi.mocked(db.distribution.groupBy).mockResolvedValue([
+    vi.mocked(prisma.distribution.groupBy).mockResolvedValue([
       { donationId: "d1", _sum: { amount: 1000 } },
     ] as any)
     expect(await getDesignatedDonationsForRecipient("recipient-1")).toEqual([])
   })
 
   it("skips the groupBy call when the recipient has no designated donations", async () => {
-    vi.mocked(db.donation.findMany).mockResolvedValue([])
+    vi.mocked(prisma.donation.findMany).mockResolvedValue([])
     expect(await getDesignatedDonationsForRecipient("recipient-1")).toEqual([])
-    expect(db.distribution.groupBy).not.toHaveBeenCalled()
+    expect(prisma.distribution.groupBy).not.toHaveBeenCalled()
   })
 })
