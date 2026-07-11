@@ -1,29 +1,36 @@
-"use client"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { setUserScope } from "@/app/(dashboard)/users/actions"
-import { getErrorMessage } from "@/lib/utils"
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { setUserScope } from "@/app/(dashboard)/users/actions";
+import { getErrorMessage } from "@/lib/utils";
 
-interface Donor { id: string; name: string | null; isAnonymous: boolean }
-interface Recipient { id: string; name: string }
+interface Donor {
+  id: string;
+  name: string | null;
+  isAnonymous: boolean;
+}
+interface Recipient {
+  id: string;
+  name: string;
+}
 
 interface UserFormProps {
   onSubmit: (data: {
-    name: string
-    email: string
-    password?: string
-    role: "ADMIN" | "DATA_ENTRY" | "VIEWER"
-    scopeType: "ALL" | "RESTRICTED"
-  }) => Promise<void>
-  defaultValues?: { name?: string; email?: string; role?: string; scopeType?: string }
-  userId?: string
-  allDonors?: Donor[]
-  allRecipients?: Recipient[]
-  assignedDonorIds?: string[]
-  assignedRecipientIds?: string[]
+    name: string;
+    email: string;
+    password?: string;
+    role: "ADMIN" | "DATA_ENTRY" | "VIEWER";
+    scopeType: "ALL" | "RESTRICTED";
+  }) => Promise<void>;
+  defaultValues?: { name?: string; email?: string; role?: string; scopeType?: string };
+  userId?: string;
+  allDonors?: Donor[];
+  allRecipients?: Recipient[];
+  assignedDonorIds?: string[];
+  assignedRecipientIds?: string[];
 }
 
 export function UserForm({
@@ -35,29 +42,27 @@ export function UserForm({
   assignedDonorIds = [],
   assignedRecipientIds = [],
 }: UserFormProps) {
-  const router = useRouter()
-  const [scopeType, setScopeType] = useState(defaultValues?.scopeType ?? "ALL")
-  const [selectedDonors, setSelectedDonors] = useState<string[]>(assignedDonorIds)
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>(assignedRecipientIds)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const [scopeType, setScopeType] = useState(defaultValues?.scopeType ?? "ALL");
+  const [selectedDonors, setSelectedDonors] = useState<string[]>(assignedDonorIds);
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>(assignedRecipientIds);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   function toggleDonor(id: string) {
-    setSelectedDonors((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    )
+    setSelectedDonors((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
   function toggleRecipient(id: string) {
     setSelectedRecipients((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    )
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-    const form = new FormData(e.currentTarget)
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const form = new FormData(e.currentTarget);
     try {
       await onSubmit({
         name: form.get("name") as string,
@@ -65,15 +70,15 @@ export function UserForm({
         password: (form.get("password") as string) || undefined,
         role: form.get("role") as "ADMIN" | "DATA_ENTRY" | "VIEWER",
         scopeType: form.get("scopeType") as "ALL" | "RESTRICTED",
-      })
+      });
       if (userId && form.get("scopeType") === "RESTRICTED") {
-        await setUserScope(userId, selectedDonors, selectedRecipients)
+        await setUserScope(userId, selectedDonors, selectedRecipients);
       }
-      router.push("/users")
+      router.push("/users");
     } catch (e) {
-      setError(getErrorMessage(e))
+      setError(getErrorMessage(e));
     }
-    setLoading(false)
+    setLoading(false);
   }
 
   return (
@@ -92,7 +97,11 @@ export function UserForm({
       </div>
       <div className="space-y-1">
         <Label>Role</Label>
-        <select name="role" defaultValue={defaultValues?.role ?? "VIEWER"} className="w-full border border-border rounded px-3 py-2 text-sm bg-background">
+        <select
+          name="role"
+          defaultValue={defaultValues?.role ?? "VIEWER"}
+          className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+        >
           <option value="ADMIN">Admin — full access, manages users</option>
           <option value="DATA_ENTRY">Data Entry — can add/edit records</option>
           <option value="VIEWER">Viewer — read-only</option>
@@ -173,5 +182,5 @@ export function UserForm({
         </Button>
       </div>
     </form>
-  )
+  );
 }

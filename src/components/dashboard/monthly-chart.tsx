@@ -1,10 +1,10 @@
-"use client"
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts"
+"use client";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 export interface MonthData {
-  month: string
-  received: number
-  distributed: number
+  month: string;
+  received: number;
+  distributed: number;
 }
 
 export function MonthlyChart({ data }: { data: MonthData[] }) {
@@ -21,5 +21,5 @@ export function MonthlyChart({ data }: { data: MonthData[] }) {
         </BarChart>
       </ResponsiveContainer>
     </div>
-  )
+  );
 }

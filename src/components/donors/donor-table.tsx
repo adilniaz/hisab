@@ -1,12 +1,12 @@
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import type { Donor } from "@prisma/client"
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import type { Donor } from "@prisma/client";
 
-type DonorWithCount = Donor & { _count: { donations: number } }
+type DonorWithCount = Donor & { _count: { donations: number } };
 
 export function DonorTable({ donors }: { donors: DonorWithCount[] }) {
   if (donors.length === 0) {
-    return <p className="text-sm text-muted-foreground p-4">No donors found.</p>
+    return <p className="text-sm text-muted-foreground p-4">No donors found.</p>;
   }
   return (
     <table className="w-full text-sm">
@@ -36,5 +36,5 @@ export function DonorTable({ donors }: { donors: DonorWithCount[] }) {
         ))}
       </tbody>
     </table>
-  )
+  );
 }

@@ -1,15 +1,15 @@
-"use client"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { getErrorMessage } from "@/lib/utils"
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/utils";
 
 const schema = z.object({
   name: z.string().min(1, "Name required"),
@@ -18,31 +18,38 @@ const schema = z.object({
   category: z.enum(["MEDICAL", "FOOD", "EDUCATION", "RENT", "EMERGENCY", "OTHER"]),
   notes: z.string().optional(),
   isActive: z.boolean().default(true),
-})
-type Fields = z.infer<typeof schema>
+});
+type Fields = z.infer<typeof schema>;
 
-export function RecipientForm({ onSubmit, defaultValues }: {
-  onSubmit: (data: Fields) => Promise<void>
-  defaultValues?: Partial<Fields>
+export function RecipientForm({
+  onSubmit,
+  defaultValues,
+}: {
+  onSubmit: (data: Fields) => Promise<void>;
+  defaultValues?: Partial<Fields>;
 }) {
-  const router = useRouter()
-  const [serverError, setServerError] = useState("")
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<z.input<typeof schema>, unknown, Fields>({
+  const router = useRouter();
+  const [serverError, setServerError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<z.input<typeof schema>, unknown, Fields>({
     resolver: zodResolver(schema),
     defaultValues: { isActive: true, category: "OTHER", ...defaultValues },
-  })
+  });
 
   return (
     <form
       onSubmit={handleSubmit(async (data) => {
         try {
-          await onSubmit(data)
-          toast.success("Recipient saved")
-          router.push("/recipients")
+          await onSubmit(data);
+          toast.success("Recipient saved");
+          router.push("/recipients");
         } catch (e) {
-          const message = getErrorMessage(e)
-          setServerError(message)
-          toast.error(message)
+          const message = getErrorMessage(e);
+          setServerError(message);
+          toast.error(message);
         }
       })}
       className="space-y-4 max-w-lg"
@@ -62,9 +69,14 @@ export function RecipientForm({ onSubmit, defaultValues }: {
       </div>
       <div className="space-y-1">
         <Label>Category of need</Label>
-        <select {...register("category")} className="w-full border border-border rounded px-3 py-2 text-sm bg-background">
+        <select
+          {...register("category")}
+          className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+        >
           {(["MEDICAL", "FOOD", "EDUCATION", "RENT", "EMERGENCY", "OTHER"] as const).map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c} value={c}>
+              {c}
+            </option>
           ))}
         </select>
       </div>
@@ -88,5 +100,5 @@ export function RecipientForm({ onSubmit, defaultValues }: {
         </Button>
       </div>
     </form>
-  )
+  );
 }

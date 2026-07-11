@@ -1,20 +1,20 @@
-import { notFound } from "next/navigation"
-import { getDonation } from "../actions"
-import { requireAuth } from "@/lib/permissions"
-import { Topbar } from "@/components/layout/topbar"
-import { Badge } from "@/components/ui/badge"
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import Link from "next/link"
+import { notFound } from "next/navigation";
+import { getDonation } from "../actions";
+import { requireAuth } from "@/lib/permissions";
+import { Topbar } from "@/components/layout/topbar";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default async function DonationDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const [donation, session] = await Promise.all([getDonation(id), requireAuth()])
-  if (!donation) notFound()
-  const isAdmin = session.user.role === "ADMIN"
+  const { id } = await params;
+  const [donation, session] = await Promise.all([getDonation(id), requireAuth()]);
+  if (!donation) notFound();
+  const isAdmin = session.user.role === "ADMIN";
 
-  const distributed = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
-  const remaining = Math.max(0, Number(donation.amount) - distributed)
+  const distributed = donation.distributions.reduce((s, d) => s + Number(d.amount), 0);
+  const remaining = Math.max(0, Number(donation.amount) - distributed);
 
   return (
     <>
@@ -22,7 +22,10 @@ export default async function DonationDetailPage({ params }: { params: Promise<{
       <div className="p-6 space-y-6">
         {isAdmin && (
           <div>
-            <Link href={`/donations/${id}/edit`} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+            <Link
+              href={`/donations/${id}/edit`}
+              className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+            >
               Edit
             </Link>
           </div>
@@ -34,7 +37,9 @@ export default async function DonationDetailPage({ params }: { params: Promise<{
           </div>
           <div>
             <span className="text-muted-foreground">Amount:</span>{" "}
-            <span className="text-green-400 font-bold">PKR {Number(donation.amount).toLocaleString()}</span>
+            <span className="text-green-400 font-bold">
+              PKR {Number(donation.amount).toLocaleString()}
+            </span>
           </div>
           <div>
             <span className="text-muted-foreground">Date:</span>{" "}
@@ -54,8 +59,8 @@ export default async function DonationDetailPage({ params }: { params: Promise<{
             </div>
           )}
           <div>
-            <span className="text-muted-foreground">Distributed:</span>{" "}
-            PKR {distributed.toLocaleString()}
+            <span className="text-muted-foreground">Distributed:</span> PKR{" "}
+            {distributed.toLocaleString()}
           </div>
           <div>
             <span className="text-muted-foreground">Remaining:</span>{" "}
@@ -68,8 +73,7 @@ export default async function DonationDetailPage({ params }: { params: Promise<{
             {donation.paymentMethod.replace(/_/g, " ")}
           </div>
           <div>
-            <span className="text-muted-foreground">Recorded by:</span>{" "}
-            {donation.recordedBy.name}
+            <span className="text-muted-foreground">Recorded by:</span> {donation.recordedBy.name}
           </div>
           {donation.notes && (
             <div className="col-span-2">
@@ -105,5 +109,5 @@ export default async function DonationDetailPage({ params }: { params: Promise<{
         )}
       </div>
     </>
-  )
+  );
 }

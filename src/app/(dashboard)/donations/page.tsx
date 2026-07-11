@@ -1,20 +1,20 @@
-import { getDonations } from "./actions"
-import { DonationTable } from "@/components/donations/donation-table"
-import { Topbar } from "@/components/layout/topbar"
-import { Button } from "@/components/ui/button"
-import { Pagination } from "@/components/ui/pagination"
-import Link from "next/link"
-import { requireAuth, canModify } from "@/lib/permissions"
+import { getDonations } from "./actions";
+import { DonationTable } from "@/components/donations/donation-table";
+import { Topbar } from "@/components/layout/topbar";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import Link from "next/link";
+import { requireAuth, canModify } from "@/lib/permissions";
 
 export default async function DonationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; from?: string; to?: string }>
+  searchParams: Promise<{ q?: string; page?: string; from?: string; to?: string }>;
 }) {
-  const session = await requireAuth()
-  const { q, page: pageStr, from, to } = await searchParams
-  const page = Number(pageStr ?? "1")
-  const { items, total, pageSize } = await getDonations({ q, page, from, to })
+  const session = await requireAuth();
+  const { q, page: pageStr, from, to } = await searchParams;
+  const page = Number(pageStr ?? "1");
+  const { items, total, pageSize } = await getDonations({ q, page, from, to });
   return (
     <>
       <Topbar title="Donations" />
@@ -39,7 +39,9 @@ export default async function DonationsPage({
               defaultValue={to}
               className="border border-border rounded px-3 py-1.5 text-sm bg-background"
             />
-            <Button size="sm" variant="outline" type="submit">Filter</Button>
+            <Button size="sm" variant="outline" type="submit">
+              Filter
+            </Button>
           </form>
           {canModify(session) && (
             <Link href="/donations/new">
@@ -48,8 +50,14 @@ export default async function DonationsPage({
           )}
         </div>
         <DonationTable donations={items} />
-        <Pagination page={page} total={total} pageSize={pageSize} basePath="/donations" params={{ q, from, to }} />
+        <Pagination
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          basePath="/donations"
+          params={{ q, from, to }}
+        />
       </div>
     </>
-  )
+  );
 }

@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server"
-import { getRecipientHistory } from "../../../actions"
-import { renderToBuffer } from "@react-pdf/renderer"
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer"
-import React from "react"
+import { NextResponse } from "next/server";
+import { getRecipientHistory } from "../../../actions";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import React from "react";
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: "Helvetica" },
@@ -24,12 +24,12 @@ const styles = StyleSheet.create({
   col2: { flex: 2 },
   muted: { color: "#666666" },
   red: { color: "#dc2626" },
-})
+});
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const recipient = await getRecipientHistory(id)
-  const total = recipient.distributions.reduce((s, d) => s + Number(d.amount), 0)
+  const { id } = await params;
+  const recipient = await getRecipientHistory(id);
+  const total = recipient.distributions.reduce((s, d) => s + Number(d.amount), 0);
 
   const doc = React.createElement(
     Document,
@@ -41,7 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       React.createElement(
         Text,
         { style: styles.subtitle },
-        `Recipient History · ${recipient.category} · Total received PKR ${total.toLocaleString()} · Generated ${new Date().toLocaleDateString()}`
+        `Recipient History · ${recipient.category} · Total received PKR ${total.toLocaleString()} · Generated ${new Date().toLocaleDateString()}`,
       ),
       React.createElement(
         View,
@@ -50,33 +50,41 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         React.createElement(Text, { style: styles.col1 }, "Amount"),
         React.createElement(Text, { style: styles.col2 }, "Purpose"),
         React.createElement(Text, { style: styles.col2 }, "Source"),
-        React.createElement(Text, { style: styles.col1 }, "By")
+        React.createElement(Text, { style: styles.col1 }, "By"),
       ),
       ...recipient.distributions.map((d) =>
         React.createElement(
           View,
           { key: d.id, style: styles.row },
           React.createElement(Text, { style: styles.col1 }, new Date(d.date).toLocaleDateString()),
-          React.createElement(Text, { style: { ...styles.col1, ...styles.red } }, `PKR ${Number(d.amount).toLocaleString()}`),
+          React.createElement(
+            Text,
+            { style: { ...styles.col1, ...styles.red } },
+            `PKR ${Number(d.amount).toLocaleString()}`,
+          ),
           React.createElement(Text, { style: styles.col2 }, d.purpose),
           React.createElement(
             Text,
             { style: { ...styles.col2, ...styles.muted } },
             d.donation
               ? `${d.donation.paymentContext} (${d.donation.donor?.name ?? "Anon"})`
-              : "Pool"
+              : "Pool",
           ),
-          React.createElement(Text, { style: { ...styles.col1, ...styles.muted } }, d.recordedBy.name)
-        )
-      )
-    )
-  )
+          React.createElement(
+            Text,
+            { style: { ...styles.col1, ...styles.muted } },
+            d.recordedBy.name,
+          ),
+        ),
+      ),
+    ),
+  );
 
-  const buffer = await renderToBuffer(doc)
+  const buffer = await renderToBuffer(doc);
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="recipient-history-${id}.pdf"`,
     },
-  })
+  });
 }

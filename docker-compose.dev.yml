@@ -2,43 +2,42 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: hisab-db-dev
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: hisab
-      POSTGRES_PASSWORD: hisab
-      POSTGRES_DB: hisab
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-hisab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hisab}
+      POSTGRES_DB: ${POSTGRES_DB:-hisab}
+    ports: ["5432:5432"]
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER:-hisab}
+      interval: 5s
+      retries: 5
     volumes:
       - hisab-pgdata-dev:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hisab"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
   app:
     build:
       context: .
       dockerfile: Dockerfile.dev
     container_name: hisab-app-dev
-    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+    ports: ["3000:3000"]
     environment:
-      DATABASE_URL: postgresql://hisab:hisab@postgres:5432/hisab
-      AUTH_SECRET: dev-secret-do-not-use-in-production
-      AUTH_URL: http://localhost:3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hisab}:${POSTGRES_PASSWORD:-hisab}@postgres:5432/${POSTGRES_DB:-hisab}
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-do-not-use-in-production}
+      AUTH_URL: http://localhost:${APP_PORT:-3000}
+      AUTH_TRUST_HOST: "true"
       NODE_ENV: development
       WATCHPACK_POLLING: "true"
-    ports:
-      - "3000:3000"
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hisab.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-hisab-dev-password}
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
-    command: sh -c "npx prisma migrate deploy && npm run db:seed && npx next dev --hostname 0.0.0.0"
+    command: >
+      sh -c "npx prisma migrate deploy && npm run db:seed && npx next dev --hostname 0.0.0.0"
 
 volumes:
   hisab-pgdata-dev:

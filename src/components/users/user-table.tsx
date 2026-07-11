@@ -1,12 +1,12 @@
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import type { User } from "@prisma/client"
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import type { User } from "@prisma/client";
 
-type Row = User & { _count: { userScopes: number } }
+type Row = User & { _count: { userScopes: number } };
 
 export function UserTable({ users }: { users: Row[] }) {
   if (users.length === 0) {
-    return <p className="text-sm text-muted-foreground p-4">No users found.</p>
+    return <p className="text-sm text-muted-foreground p-4">No users found.</p>;
   }
   return (
     <table className="w-full text-sm">
@@ -31,13 +31,11 @@ export function UserTable({ users }: { users: Row[] }) {
               <Badge variant="outline">{u.role}</Badge>
             </td>
             <td className="py-2">
-              {u.scopeType === "ALL"
-                ? "All data"
-                : `Restricted (${u._count.userScopes} items)`}
+              {u.scopeType === "ALL" ? "All data" : `Restricted (${u._count.userScopes} items)`}
             </td>
           </tr>
         ))}
       </tbody>
     </table>
-  )
+  );
 }

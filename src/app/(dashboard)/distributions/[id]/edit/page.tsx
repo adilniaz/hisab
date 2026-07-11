@@ -1,13 +1,21 @@
-import { notFound } from "next/navigation"
-import { requireAuth } from "@/lib/permissions"
-import { getDistribution, updateDistribution, getDesignatedDonationsForRecipient } from "../../actions"
-import { DistributionForm } from "@/components/distributions/distribution-form"
-import { Topbar } from "@/components/layout/topbar"
-import { prisma } from "@/lib/prisma"
+import { notFound } from "next/navigation";
+import { requireAuth } from "@/lib/permissions";
+import {
+  getDistribution,
+  updateDistribution,
+  getDesignatedDonationsForRecipient,
+} from "../../actions";
+import { DistributionForm } from "@/components/distributions/distribution-form";
+import { Topbar } from "@/components/layout/topbar";
+import { prisma } from "@/lib/prisma";
 
-export default async function EditDistributionPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAuth({ roles: ['ADMIN'] })
-  const { id } = await params
+export default async function EditDistributionPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  await requireAuth({ roles: ["ADMIN"] });
+  const { id } = await params;
   const [distribution, recipients] = await Promise.all([
     getDistribution(id),
     prisma.recipient.findMany({
@@ -15,12 +23,12 @@ export default async function EditDistributionPage({ params }: { params: Promise
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-  ])
-  if (!distribution) notFound()
+  ]);
+  if (!distribution) notFound();
 
   const defaultDesignatedDonations = distribution.recipientId
     ? await getDesignatedDonationsForRecipient(distribution.recipientId)
-    : []
+    : [];
 
   return (
     <>
@@ -41,5 +49,5 @@ export default async function EditDistributionPage({ params }: { params: Promise
         />
       </div>
     </>
-  )
+  );
 }

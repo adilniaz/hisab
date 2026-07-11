@@ -1,18 +1,22 @@
-import { notFound } from "next/navigation"
-import { getDistribution, deleteDistribution } from "../actions"
-import { requireAuth } from "@/lib/permissions"
-import { Topbar } from "@/components/layout/topbar"
-import { Badge } from "@/components/ui/badge"
-import { DeleteButton } from "@/components/ui/delete-button"
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import Link from "next/link"
+import { notFound } from "next/navigation";
+import { getDistribution, deleteDistribution } from "../actions";
+import { requireAuth } from "@/lib/permissions";
+import { Topbar } from "@/components/layout/topbar";
+import { Badge } from "@/components/ui/badge";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 
-export default async function DistributionDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const [distribution, session] = await Promise.all([getDistribution(id), requireAuth()])
-  if (!distribution) notFound()
-  const isAdmin = session.user.role === "ADMIN"
+export default async function DistributionDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const [distribution, session] = await Promise.all([getDistribution(id), requireAuth()]);
+  if (!distribution) notFound();
+  const isAdmin = session.user.role === "ADMIN";
 
   return (
     <>
@@ -20,7 +24,10 @@ export default async function DistributionDetailPage({ params }: { params: Promi
       <div className="p-6 space-y-6">
         {isAdmin && (
           <div className="flex gap-2">
-            <Link href={`/distributions/${id}/edit`} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+            <Link
+              href={`/distributions/${id}/edit`}
+              className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+            >
               Edit
             </Link>
             <DeleteButton
@@ -39,7 +46,9 @@ export default async function DistributionDetailPage({ params }: { params: Promi
           </div>
           <div>
             <span className="text-muted-foreground">Amount:</span>{" "}
-            <span className="text-red-400 font-bold">PKR {Number(distribution.amount).toLocaleString()}</span>
+            <span className="text-red-400 font-bold">
+              PKR {Number(distribution.amount).toLocaleString()}
+            </span>
           </div>
           <div>
             <span className="text-muted-foreground">Date:</span>{" "}
@@ -50,9 +59,14 @@ export default async function DistributionDetailPage({ params }: { params: Promi
           </div>
           <div>
             <span className="text-muted-foreground">Source:</span>{" "}
-            {distribution.donation
-              ? <Badge variant="outline">{distribution.donation.paymentContext} — {distribution.donation.donor?.name ?? "Anon"}</Badge>
-              : "General pool"}
+            {distribution.donation ? (
+              <Badge variant="outline">
+                {distribution.donation.paymentContext} —{" "}
+                {distribution.donation.donor?.name ?? "Anon"}
+              </Badge>
+            ) : (
+              "General pool"
+            )}
           </div>
           <div>
             <span className="text-muted-foreground">Recorded by:</span>{" "}
@@ -66,5 +80,5 @@ export default async function DistributionDetailPage({ params }: { params: Promi
         </div>
       </div>
     </>
-  )
+  );
 }

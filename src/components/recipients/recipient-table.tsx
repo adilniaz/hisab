@@ -1,12 +1,12 @@
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import type { Recipient } from "@prisma/client"
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import type { Recipient } from "@prisma/client";
 
-type Row = Recipient & { _count: { distributions: number } }
+type Row = Recipient & { _count: { distributions: number } };
 
 export function RecipientTable({ recipients }: { recipients: Row[] }) {
   if (recipients.length === 0) {
-    return <p className="text-sm text-muted-foreground p-4">No recipients found.</p>
+    return <p className="text-sm text-muted-foreground p-4">No recipients found.</p>;
   }
   return (
     <table className="w-full text-sm">
@@ -31,13 +31,15 @@ export function RecipientTable({ recipients }: { recipients: Row[] }) {
             </td>
             <td className="py-2">{r._count.distributions}</td>
             <td className="py-2">
-              {r.isActive
-                ? <Badge variant="secondary">Active</Badge>
-                : <Badge variant="outline">Inactive</Badge>}
+              {r.isActive ? (
+                <Badge variant="secondary">Active</Badge>
+              ) : (
+                <Badge variant="outline">Inactive</Badge>
+              )}
             </td>
           </tr>
         ))}
       </tbody>
     </table>
-  )
+  );
 }

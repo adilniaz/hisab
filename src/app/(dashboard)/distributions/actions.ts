@@ -1,12 +1,12 @@
-"use server"
-import { prisma } from "@/lib/prisma"
-import { requireAuth, canModify, recipientFilter } from "@/lib/permissions"
-import { getDonationRemainingBalance, getPoolBalance } from "@/lib/balance"
-import { revalidatePath } from "next/cache"
-import { z } from "zod"
-import type { Prisma } from "@prisma/client"
+"use server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth, canModify, recipientFilter } from "@/lib/permissions";
+import { getDonationRemainingBalance, getPoolBalance } from "@/lib/balance";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 
-const PAGE_SIZE = 25
+const PAGE_SIZE = 25;
 
 const DistributionSchema = z.object({
   recipientId: z.string().uuid(),
@@ -15,35 +15,35 @@ const DistributionSchema = z.object({
   purpose: z.string().min(1, "Purpose required"),
   donationId: z.string().uuid().optional().or(z.literal("")),
   notes: z.string().optional(),
-})
+});
 
 async function assertWithinBalance(
   tx: Prisma.TransactionClient,
   donationId: string | undefined,
   amount: number,
-  excludeDistributionId?: string
+  excludeDistributionId?: string,
 ) {
   const remaining = donationId
     ? await getDonationRemainingBalance(donationId, tx, excludeDistributionId)
-    : await getPoolBalance(tx, excludeDistributionId)
+    : await getPoolBalance(tx, excludeDistributionId);
   if (amount > remaining) {
     throw new Error(
       donationId
         ? `Amount PKR ${amount} exceeds remaining balance of PKR ${remaining} on this donation`
-        : `Amount PKR ${amount} exceeds remaining pool balance of PKR ${remaining}`
-    )
+        : `Amount PKR ${amount} exceeds remaining pool balance of PKR ${remaining}`,
+    );
   }
 }
 
 export async function createDistribution(data: z.infer<typeof DistributionSchema>) {
-  const session = await requireAuth()
-  if (!canModify(session)) throw new Error("Unauthorized")
-  const parsed = DistributionSchema.parse(data)
-  const donationId = parsed.donationId || undefined
+  const session = await requireAuth();
+  if (!canModify(session)) throw new Error("Unauthorized");
+  const parsed = DistributionSchema.parse(data);
+  const donationId = parsed.donationId || undefined;
 
   await prisma.$transaction(
     async (tx) => {
-      await assertWithinBalance(tx, donationId, parsed.amount)
+      await assertWithinBalance(tx, donationId, parsed.amount);
       await tx.distribution.create({
         data: {
           recipientId: parsed.recipientId,
@@ -54,22 +54,22 @@ export async function createDistribution(data: z.infer<typeof DistributionSchema
           notes: parsed.notes,
           recordedById: session.user.id,
         },
-      })
+      });
     },
-    { isolationLevel: "Serializable" }
-  )
-  revalidatePath("/distributions")
-  revalidatePath("/overview")
+    { isolationLevel: "Serializable" },
+  );
+  revalidatePath("/distributions");
+  revalidatePath("/overview");
 }
 
 export async function updateDistribution(id: string, data: z.infer<typeof DistributionSchema>) {
-  await requireAuth({ roles: ['ADMIN'] })
-  const parsed = DistributionSchema.parse(data)
-  const donationId = parsed.donationId || undefined
+  await requireAuth({ roles: ["ADMIN"] });
+  const parsed = DistributionSchema.parse(data);
+  const donationId = parsed.donationId || undefined;
 
   await prisma.$transaction(
     async (tx) => {
-      await assertWithinBalance(tx, donationId, parsed.amount, id)
+      await assertWithinBalance(tx, donationId, parsed.amount, id);
       await tx.distribution.update({
         where: { id },
         data: {
@@ -80,33 +80,33 @@ export async function updateDistribution(id: string, data: z.infer<typeof Distri
           donationId: donationId ?? null,
           notes: parsed.notes,
         },
-      })
+      });
     },
-    { isolationLevel: "Serializable" }
-  )
-  revalidatePath("/distributions")
-  revalidatePath("/overview")
+    { isolationLevel: "Serializable" },
+  );
+  revalidatePath("/distributions");
+  revalidatePath("/overview");
 }
 
 export async function deleteDistribution(id: string) {
-  await requireAuth({ roles: ['ADMIN'] })
-  await prisma.distribution.update({ where: { id }, data: { deletedAt: new Date() } })
-  revalidatePath("/distributions")
-  revalidatePath("/overview")
+  await requireAuth({ roles: ["ADMIN"] });
+  await prisma.distribution.update({ where: { id }, data: { deletedAt: new Date() } });
+  revalidatePath("/distributions");
+  revalidatePath("/overview");
 }
 
 export async function getDistributions(params: { page?: number; q?: string } = {}) {
-  const session = await requireAuth()
-  const scopeWhere = recipientFilter(session)
-  const page = params.page ?? 1
+  const session = await requireAuth();
+  const scopeWhere = recipientFilter(session);
+  const page = params.page ?? 1;
   const recipientFilter2 = {
     ...scopeWhere,
     ...(params.q ? { name: { contains: params.q, mode: "insensitive" as const } } : {}),
-  }
+  };
   const where = {
     deletedAt: null,
     ...(Object.keys(recipientFilter2).length ? { recipient: recipientFilter2 } : {}),
-  }
+  };
   const [items, total] = await Promise.all([
     prisma.distribution.findMany({
       where,
@@ -120,13 +120,13 @@ export async function getDistributions(params: { page?: number; q?: string } = {
       take: PAGE_SIZE,
     }),
     prisma.distribution.count({ where }),
-  ])
-  return { items, total, page, pageSize: PAGE_SIZE }
+  ]);
+  return { items, total, page, pageSize: PAGE_SIZE };
 }
 
 export async function getDistribution(id: string) {
-  const session = await requireAuth()
-  const scopeWhere = recipientFilter(session)
+  const session = await requireAuth();
+  const scopeWhere = recipientFilter(session);
   return prisma.distribution.findFirst({
     where: {
       id,
@@ -138,23 +138,23 @@ export async function getDistribution(id: string) {
       donation: { select: { id: true, paymentContext: true, donor: { select: { name: true } } } },
       recordedBy: { select: { name: true } },
     },
-  })
+  });
 }
 
 export async function getDesignatedDonationsForRecipient(recipientId: string) {
-  await requireAuth()
+  await requireAuth();
   const donations = await prisma.donation.findMany({
     where: { type: "DESIGNATED", designatedRecipientId: recipientId, deletedAt: null },
     select: { id: true, amount: true, date: true },
-  })
-  if (donations.length === 0) return []
+  });
+  if (donations.length === 0) return [];
 
   const spentByDonation = await prisma.distribution.groupBy({
     by: ["donationId"],
     where: { donationId: { in: donations.map((d) => d.id) }, deletedAt: null },
     _sum: { amount: true },
-  })
-  const spentMap = new Map(spentByDonation.map((s) => [s.donationId, Number(s._sum.amount ?? 0)]))
+  });
+  const spentMap = new Map(spentByDonation.map((s) => [s.donationId, Number(s._sum.amount ?? 0)]));
 
   return donations
     .map((d) => ({
@@ -163,5 +163,5 @@ export async function getDesignatedDonationsForRecipient(recipientId: string) {
       remaining: Math.max(0, Number(d.amount) - (spentMap.get(d.id) ?? 0)),
       date: d.date,
     }))
-    .filter((d) => d.remaining > 0)
+    .filter((d) => d.remaining > 0);
 }

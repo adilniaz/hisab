@@ -1,10 +1,10 @@
-"use server"
-import { prisma } from "@/lib/prisma"
-import { requireAuth, donorFilter, recipientFilter } from "@/lib/permissions"
+"use server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth, donorFilter, recipientFilter } from "@/lib/permissions";
 
 export async function getDonorStatement(donorId: string) {
-  const session = await requireAuth()
-  const scopeWhere = donorFilter(session)
+  const session = await requireAuth();
+  const scopeWhere = donorFilter(session);
   const donor = await prisma.donor.findFirst({
     where: { id: donorId, deletedAt: null, ...scopeWhere },
     include: {
@@ -19,14 +19,14 @@ export async function getDonorStatement(donorId: string) {
         },
       },
     },
-  })
-  if (!donor) throw new Error("Donor not found")
-  return donor
+  });
+  if (!donor) throw new Error("Donor not found");
+  return donor;
 }
 
 export async function getRecipientHistory(recipientId: string) {
-  const session = await requireAuth()
-  const scopeWhere = recipientFilter(session)
+  const session = await requireAuth();
+  const scopeWhere = recipientFilter(session);
   const recipient = await prisma.recipient.findFirst({
     where: { id: recipientId, deletedAt: null, ...scopeWhere },
     include: {
@@ -39,16 +39,16 @@ export async function getRecipientHistory(recipientId: string) {
         },
       },
     },
-  })
-  if (!recipient) throw new Error("Recipient not found")
-  return recipient
+  });
+  if (!recipient) throw new Error("Recipient not found");
+  return recipient;
 }
 
 export async function getAuditReport(from: string, to: string) {
-  const session = await requireAuth()
-  const donorScope = donorFilter(session)
-  const recipientScope = recipientFilter(session)
-  const dateWhere = { date: { gte: new Date(from), lte: new Date(to) } }
+  const session = await requireAuth();
+  const donorScope = donorFilter(session);
+  const recipientScope = recipientFilter(session);
+  const dateWhere = { date: { gte: new Date(from), lte: new Date(to) } };
   const [donations, distributions] = await Promise.all([
     prisma.donation.findMany({
       where: {
@@ -68,26 +68,26 @@ export async function getAuditReport(from: string, to: string) {
       include: { recipient: true },
       orderBy: { date: "asc" },
     }),
-  ])
-  return { donations, distributions, from, to }
+  ]);
+  return { donations, distributions, from, to };
 }
 
 export async function getAllDonors() {
-  const session = await requireAuth()
-  const scopeWhere = donorFilter(session)
+  const session = await requireAuth();
+  const scopeWhere = donorFilter(session);
   return prisma.donor.findMany({
     where: { deletedAt: null, ...scopeWhere },
     select: { id: true, name: true, isAnonymous: true },
     orderBy: { name: "asc" },
-  })
+  });
 }
 
 export async function getAllRecipients() {
-  const session = await requireAuth()
-  const scopeWhere = recipientFilter(session)
+  const session = await requireAuth();
+  const scopeWhere = recipientFilter(session);
   return prisma.recipient.findMany({
     where: { isActive: true, deletedAt: null, ...scopeWhere },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
-  })
+  });
 }

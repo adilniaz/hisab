@@ -1,35 +1,35 @@
-"use client"
-import { useState } from "react"
-import { changePassword } from "./actions"
-import { Topbar } from "@/components/layout/topbar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+"use client";
+import { useState } from "react";
+import { changePassword } from "./actions";
+import { Topbar } from "@/components/layout/topbar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ProfilePage() {
-  const [msg, setMsg] = useState("")
-  const [isError, setIsError] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState("");
+  const [isError, setIsError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setMsg("")
-    const form = new FormData(e.currentTarget)
+    e.preventDefault();
+    setLoading(true);
+    setMsg("");
+    const form = new FormData(e.currentTarget);
     const result = await changePassword({
       currentPassword: form.get("currentPassword") as string,
       newPassword: form.get("newPassword") as string,
-    })
+    });
     if (result?.error) {
-      setMsg(result.error)
-      setIsError(true)
+      setMsg(result.error);
+      setIsError(true);
     } else {
-      setMsg("Password changed successfully")
-      setIsError(false)
-      ;(e.target as HTMLFormElement).reset()
+      setMsg("Password changed successfully");
+      setIsError(false);
+      (e.target as HTMLFormElement).reset();
     }
-    setLoading(false)
+    setLoading(false);
   }
 
   return (
@@ -63,5 +63,5 @@ export default function ProfilePage() {
         </Card>
       </div>
     </>
-  )
+  );
 }

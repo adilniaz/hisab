@@ -1,27 +1,41 @@
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
-import type { Session } from "next-auth"
-import type { Prisma } from "@prisma/client"
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
+import type { Session } from "next-auth";
+import type { Prisma } from "@prisma/client";
 
+// Server Action / server component guard — redirects if unauthenticated.
 export async function requireAuth(opts?: { roles?: string[] }): Promise<Session> {
-  const session = await auth()
-  if (!session) redirect("/login")
+  const session = await auth();
+  if (!session) redirect("/login");
   if (opts?.roles && opts.roles.length > 0 && !opts.roles.includes(session.user.role)) {
-    redirect("/overview")
+    redirect("/overview");
   }
-  return session
+  return session;
+}
+
+// API route guard — returns a 401/403 NextResponse if unauthorized, or null
+// if the request may proceed.
+// Usage: const unauthorized = await requireAuthApi(opts); if (unauthorized) return unauthorized;
+export async function requireAuthApi(opts?: { roles?: string[] }): Promise<NextResponse | null> {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (opts?.roles && opts.roles.length > 0 && !opts.roles.includes(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return null;
 }
 
 export function canModify(session: Session): boolean {
-  return session.user.role === "ADMIN" || session.user.role === "DATA_ENTRY"
+  return session.user.role === "ADMIN" || session.user.role === "DATA_ENTRY";
 }
 
 export function donorFilter(session: Session): Prisma.DonorWhereInput {
-  if (session.user.scopeType === "ALL") return {}
-  return { userScopes: { some: { userId: session.user.id } } }
+  if (session.user.scopeType === "ALL") return {};
+  return { userScopes: { some: { userId: session.user.id } } };
 }
 
 export function recipientFilter(session: Session): Prisma.RecipientWhereInput {
-  if (session.user.scopeType === "ALL") return {}
-  return { userScopes: { some: { userId: session.user.id } } }
+  if (session.user.scopeType === "ALL") return {};
+  return { userScopes: { some: { userId: session.user.id } } };
 }

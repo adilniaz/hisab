@@ -1,13 +1,13 @@
-import { requireAuth } from "@/lib/permissions"
-import { getUserWithScope, updateUser } from "../actions"
-import { UserForm } from "@/components/users/user-form"
-import { Topbar } from "@/components/layout/topbar"
-import { prisma } from "@/lib/prisma"
-import { notFound } from "next/navigation"
+import { requireAuth } from "@/lib/permissions";
+import { getUserWithScope, updateUser } from "../actions";
+import { UserForm } from "@/components/users/user-form";
+import { Topbar } from "@/components/layout/topbar";
+import { prisma } from "@/lib/prisma";
+import { notFound } from "next/navigation";
 
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAuth({ roles: ['ADMIN'] })
-  const { id } = await params
+  await requireAuth({ roles: ["ADMIN"] });
+  const { id } = await params;
   const [user, allDonors, allRecipients] = await Promise.all([
     getUserWithScope(id),
     prisma.donor.findMany({
@@ -18,15 +18,13 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-  ])
-  if (!user) notFound()
+  ]);
+  if (!user) notFound();
 
-  const assignedDonorIds = user.userScopes
-    .filter((s) => s.donorId)
-    .map((s) => s.donorId!)
+  const assignedDonorIds = user.userScopes.filter((s) => s.donorId).map((s) => s.donorId!);
   const assignedRecipientIds = user.userScopes
     .filter((s) => s.recipientId)
-    .map((s) => s.recipientId!)
+    .map((s) => s.recipientId!);
 
   return (
     <>
@@ -48,5 +46,5 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
         />
       </div>
     </>
-  )
+  );
 }

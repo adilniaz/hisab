@@ -1,8 +1,8 @@
-"use client"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { useSession } from "next-auth/react"
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
 
 const NAV = [
   {
@@ -27,23 +27,21 @@ const NAV = [
     label: "Reports",
     items: [{ href: "/reports", label: "Reports & Export" }],
   },
-]
+];
 
 const ADMIN_NAV = {
   label: "Admin",
   items: [{ href: "/users", label: "Users & Access" }],
-}
+};
 
 export function Sidebar() {
-  const pathname = usePathname()
-  const { data: session } = useSession()
-  const groups = session?.user.role === "ADMIN" ? [...NAV, ADMIN_NAV] : NAV
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const groups = session?.user.role === "ADMIN" ? [...NAV, ADMIN_NAV] : NAV;
 
   return (
     <aside className="w-52 shrink-0 border-r border-border bg-card h-full flex flex-col">
-      <div className="px-4 py-3 border-b border-border font-bold text-lg tracking-tight">
-        Hisab
-      </div>
+      <div className="px-4 py-3 border-b border-border font-bold text-lg tracking-tight">Hisab</div>
       <nav className="flex-1 py-2 overflow-y-auto">
         {groups.map((g) => (
           <div key={g.label} className="mb-1">
@@ -74,5 +72,5 @@ export function Sidebar() {
         </Link>
       </div>
     </aside>
-  )
+  );
 }

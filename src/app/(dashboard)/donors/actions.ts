@@ -1,10 +1,10 @@
-"use server"
-import { prisma } from "@/lib/prisma"
-import { requireAuth, canModify, donorFilter } from "@/lib/permissions"
-import { revalidatePath } from "next/cache"
-import { z } from "zod"
+"use server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth, canModify, donorFilter } from "@/lib/permissions";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
-const PAGE_SIZE = 25
+const PAGE_SIZE = 25;
 
 const DonorSchema = z.object({
   name: z.string().optional(),
@@ -14,40 +14,40 @@ const DonorSchema = z.object({
   address: z.string().optional(),
   isRecurring: z.boolean().default(false),
   notes: z.string().optional(),
-})
+});
 
 export async function createDonor(data: z.infer<typeof DonorSchema>) {
-  const session = await requireAuth()
-  if (!canModify(session)) throw new Error("Unauthorized")
-  const parsed = DonorSchema.parse(data)
-  await prisma.donor.create({ data: { ...parsed, email: parsed.email || null } })
-  revalidatePath("/donors")
+  const session = await requireAuth();
+  if (!canModify(session)) throw new Error("Unauthorized");
+  const parsed = DonorSchema.parse(data);
+  await prisma.donor.create({ data: { ...parsed, email: parsed.email || null } });
+  revalidatePath("/donors");
 }
 
 export async function updateDonor(id: string, data: z.infer<typeof DonorSchema>) {
-  const session = await requireAuth()
-  if (!canModify(session)) throw new Error("Unauthorized")
-  const parsed = DonorSchema.parse(data)
-  await prisma.donor.update({ where: { id }, data: { ...parsed, email: parsed.email || null } })
-  revalidatePath("/donors")
-  revalidatePath(`/donors/${id}`)
+  const session = await requireAuth();
+  if (!canModify(session)) throw new Error("Unauthorized");
+  const parsed = DonorSchema.parse(data);
+  await prisma.donor.update({ where: { id }, data: { ...parsed, email: parsed.email || null } });
+  revalidatePath("/donors");
+  revalidatePath(`/donors/${id}`);
 }
 
 export async function deleteDonor(id: string) {
-  await requireAuth({ roles: ['ADMIN'] })
-  await prisma.donor.update({ where: { id }, data: { deletedAt: new Date() } })
-  revalidatePath("/donors")
+  await requireAuth({ roles: ["ADMIN"] });
+  await prisma.donor.update({ where: { id }, data: { deletedAt: new Date() } });
+  revalidatePath("/donors");
 }
 
 export async function getDonors(params: { page?: number; q?: string } = {}) {
-  const session = await requireAuth()
-  const scopeWhere = donorFilter(session)
-  const page = params.page ?? 1
+  const session = await requireAuth();
+  const scopeWhere = donorFilter(session);
+  const page = params.page ?? 1;
   const where = {
     deletedAt: null,
     ...scopeWhere,
     ...(params.q ? { name: { contains: params.q, mode: "insensitive" as const } } : {}),
-  }
+  };
   const [items, total] = await Promise.all([
     prisma.donor.findMany({
       where,
@@ -57,13 +57,13 @@ export async function getDonors(params: { page?: number; q?: string } = {}) {
       take: PAGE_SIZE,
     }),
     prisma.donor.count({ where }),
-  ])
-  return { items, total, page, pageSize: PAGE_SIZE }
+  ]);
+  return { items, total, page, pageSize: PAGE_SIZE };
 }
 
 export async function getDonor(id: string) {
-  const session = await requireAuth()
-  const scopeWhere = donorFilter(session)
+  const session = await requireAuth();
+  const scopeWhere = donorFilter(session);
   return prisma.donor.findFirst({
     where: { id, deletedAt: null, ...scopeWhere },
     include: {
@@ -73,15 +73,15 @@ export async function getDonor(id: string) {
         include: { recordedBy: { select: { name: true } } },
       },
     },
-  })
+  });
 }
 
 export async function getDonorsForPicker() {
-  const session = await requireAuth()
-  const scopeWhere = donorFilter(session)
+  const session = await requireAuth();
+  const scopeWhere = donorFilter(session);
   return prisma.donor.findMany({
     where: { deletedAt: null, ...scopeWhere },
     select: { id: true, name: true, isAnonymous: true },
     orderBy: { name: "asc" },
-  })
+  });
 }

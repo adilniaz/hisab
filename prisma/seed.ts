@@ -1,25 +1,38 @@
-import "dotenv/config"
-import { PrismaClient } from "@prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
-import { hash } from "bcryptjs"
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { hash } from "bcryptjs";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
-const db = new PrismaClient({ adapter })
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const db = new PrismaClient({ adapter });
 
+// Idempotent admin seed. Creates the initial admin from ADMIN_EMAIL /
+// ADMIN_PASSWORD. Skips gracefully when unset so `npm run db:seed` is safe
+// to run on every dev startup.
 async function main() {
-  const passwordHash = await hash("admin123", 12)
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!email || !password) {
+    console.log("seed: ADMIN_EMAIL / ADMIN_PASSWORD not set — skipping admin seed.");
+    return;
+  }
+
+  const passwordHash = await hash(password, 12);
   await db.user.upsert({
-    where: { email: "admin@hisab.local" },
+    where: { email },
     update: {},
     create: {
       name: "Admin",
-      email: "admin@hisab.local",
+      email,
       passwordHash,
       role: "ADMIN",
       scopeType: "ALL",
     },
-  })
-  console.log("Seeded: admin@hisab.local / admin123")
+  });
+  console.log(`seed: ensured admin user ${email}.`);
 }
 
-main().catch(console.error).finally(() => db.$disconnect())
+main()
+  .catch(console.error)
+  .finally(() => db.$disconnect());

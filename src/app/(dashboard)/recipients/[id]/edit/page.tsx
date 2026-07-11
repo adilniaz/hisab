@@ -1,14 +1,14 @@
-import { notFound, redirect } from "next/navigation"
-import { getRecipient, updateRecipient } from "../../actions"
-import { RecipientForm } from "@/components/recipients/recipient-form"
-import { Topbar } from "@/components/layout/topbar"
-import { requireAuth, canModify } from "@/lib/permissions"
+import { notFound, redirect } from "next/navigation";
+import { getRecipient, updateRecipient } from "../../actions";
+import { RecipientForm } from "@/components/recipients/recipient-form";
+import { Topbar } from "@/components/layout/topbar";
+import { requireAuth, canModify } from "@/lib/permissions";
 
 export default async function RecipientEditPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const [recipient, session] = await Promise.all([getRecipient(id), requireAuth()])
-  if (!recipient) notFound()
-  if (!canModify(session)) redirect(`/recipients/${id}`)
+  const { id } = await params;
+  const [recipient, session] = await Promise.all([getRecipient(id), requireAuth()]);
+  if (!recipient) notFound();
+  if (!canModify(session)) redirect(`/recipients/${id}`);
 
   return (
     <>
@@ -27,5 +27,5 @@ export default async function RecipientEditPage({ params }: { params: Promise<{ 
         />
       </div>
     </>
-  )
+  );
 }

@@ -1,22 +1,22 @@
-import { getAuditReport } from "../actions"
-import { Topbar } from "@/components/layout/topbar"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import Link from "next/link"
+import { getAuditReport } from "../actions";
+import { Topbar } from "@/components/layout/topbar";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>
+  searchParams: Promise<{ from?: string; to?: string }>;
 }) {
-  const today = new Date().toISOString().slice(0, 10)
-  const { from: fromParam, to: toParam } = await searchParams
-  const from = fromParam ?? today.slice(0, 7) + "-01"
-  const to = toParam ?? today
-  const { donations, distributions } = await getAuditReport(from, to)
+  const today = new Date().toISOString().slice(0, 10);
+  const { from: fromParam, to: toParam } = await searchParams;
+  const from = fromParam ?? today.slice(0, 7) + "-01";
+  const to = toParam ?? today;
+  const { donations, distributions } = await getAuditReport(from, to);
 
-  const totalIn = donations.reduce((s, d) => s + Number(d.amount), 0)
-  const totalOut = distributions.reduce((s, d) => s + Number(d.amount), 0)
+  const totalIn = donations.reduce((s, d) => s + Number(d.amount), 0);
+  const totalOut = distributions.reduce((s, d) => s + Number(d.amount), 0);
 
   return (
     <>
@@ -41,7 +41,9 @@ export default async function AuditPage({
               className="border border-border rounded px-3 py-1.5 text-sm bg-background"
             />
           </div>
-          <Button type="submit" size="sm">Apply</Button>
+          <Button type="submit" size="sm">
+            Apply
+          </Button>
           <Link
             href={`/reports/audit/pdf?from=${from}&to=${to}`}
             className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
@@ -57,9 +59,15 @@ export default async function AuditPage({
         </form>
 
         <div className="flex gap-6 text-sm flex-wrap">
-          <span className="text-green-400 font-bold">Total received: PKR {totalIn.toLocaleString()}</span>
-          <span className="text-red-400 font-bold">Total distributed: PKR {totalOut.toLocaleString()}</span>
-          <span className="text-blue-400 font-bold">Net: PKR {(totalIn - totalOut).toLocaleString()}</span>
+          <span className="text-green-400 font-bold">
+            Total received: PKR {totalIn.toLocaleString()}
+          </span>
+          <span className="text-red-400 font-bold">
+            Total distributed: PKR {totalOut.toLocaleString()}
+          </span>
+          <span className="text-blue-400 font-bold">
+            Net: PKR {(totalIn - totalOut).toLocaleString()}
+          </span>
         </div>
 
         <div>
@@ -79,13 +87,19 @@ export default async function AuditPage({
                 <tr key={d.id} className="border-b border-border">
                   <td className="py-2">{new Date(d.date).toLocaleDateString()}</td>
                   <td className="py-2">{d.donor?.name ?? "Anonymous"}</td>
-                  <td className="py-2 text-green-400 font-semibold">PKR {Number(d.amount).toLocaleString()}</td>
+                  <td className="py-2 text-green-400 font-semibold">
+                    PKR {Number(d.amount).toLocaleString()}
+                  </td>
                   <td className="py-2">{d.paymentContext}</td>
                   <td className="py-2">{d.type}</td>
                 </tr>
               ))}
               {donations.length === 0 && (
-                <tr><td colSpan={5} className="py-3 text-muted-foreground text-xs">No donations in this period.</td></tr>
+                <tr>
+                  <td colSpan={5} className="py-3 text-muted-foreground text-xs">
+                    No donations in this period.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -105,17 +119,23 @@ export default async function AuditPage({
                 <tr key={d.id} className="border-b border-border">
                   <td className="py-2">{new Date(d.date).toLocaleDateString()}</td>
                   <td className="py-2">{d.recipient.name}</td>
-                  <td className="py-2 text-red-400 font-semibold">PKR {Number(d.amount).toLocaleString()}</td>
+                  <td className="py-2 text-red-400 font-semibold">
+                    PKR {Number(d.amount).toLocaleString()}
+                  </td>
                   <td className="py-2">{d.purpose}</td>
                 </tr>
               ))}
               {distributions.length === 0 && (
-                <tr><td colSpan={4} className="py-3 text-muted-foreground text-xs">No distributions in this period.</td></tr>
+                <tr>
+                  <td colSpan={4} className="py-3 text-muted-foreground text-xs">
+                    No distributions in this period.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
     </>
-  )
+  );
 }

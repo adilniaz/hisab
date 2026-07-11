@@ -1,13 +1,13 @@
-import { notFound } from "next/navigation"
-import { requireAuth } from "@/lib/permissions"
-import { getDonation, getDonorsForPicker, updateDonation } from "../../actions"
-import { DonationForm } from "@/components/donations/donation-form"
-import { Topbar } from "@/components/layout/topbar"
-import { prisma } from "@/lib/prisma"
+import { notFound } from "next/navigation";
+import { requireAuth } from "@/lib/permissions";
+import { getDonation, getDonorsForPicker, updateDonation } from "../../actions";
+import { DonationForm } from "@/components/donations/donation-form";
+import { Topbar } from "@/components/layout/topbar";
+import { prisma } from "@/lib/prisma";
 
 export default async function EditDonationPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAuth({ roles: ['ADMIN'] })
-  const { id } = await params
+  await requireAuth({ roles: ["ADMIN"] });
+  const { id } = await params;
   const [donation, donors, recipients] = await Promise.all([
     getDonation(id),
     getDonorsForPicker(),
@@ -16,8 +16,8 @@ export default async function EditDonationPage({ params }: { params: Promise<{ i
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-  ])
-  if (!donation) notFound()
+  ]);
+  if (!donation) notFound();
 
   return (
     <>
@@ -41,5 +41,5 @@ export default async function EditDonationPage({ params }: { params: Promise<{ i
         />
       </div>
     </>
-  )
+  );
 }

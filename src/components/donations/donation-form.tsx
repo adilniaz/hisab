@@ -1,15 +1,15 @@
-"use client"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { getErrorMessage } from "@/lib/utils"
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/utils";
 
 const schema = z.object({
   donorId: z.string().uuid().optional().or(z.literal("")),
@@ -21,21 +21,38 @@ const schema = z.object({
   type: z.enum(["POOLED", "DESIGNATED"]),
   designatedRecipientId: z.string().uuid().optional().or(z.literal("")),
   notes: z.string().optional(),
-})
-type Fields = z.infer<typeof schema>
+});
+type Fields = z.infer<typeof schema>;
 
-interface Donor { id: string; name: string | null; isAnonymous: boolean }
-interface Recipient { id: string; name: string }
+interface Donor {
+  id: string;
+  name: string | null;
+  isAnonymous: boolean;
+}
+interface Recipient {
+  id: string;
+  name: string;
+}
 
-export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
-  onSubmit: (data: Fields) => Promise<void>
-  donors: Donor[]
-  recipients: Recipient[]
-  defaultValues?: Partial<Fields>
+export function DonationForm({
+  onSubmit,
+  donors,
+  recipients,
+  defaultValues,
+}: {
+  onSubmit: (data: Fields) => Promise<void>;
+  donors: Donor[];
+  recipients: Recipient[];
+  defaultValues?: Partial<Fields>;
 }) {
-  const router = useRouter()
-  const [serverError, setServerError] = useState("")
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<z.input<typeof schema>, unknown, Fields>({
+  const router = useRouter();
+  const [serverError, setServerError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<z.input<typeof schema>, unknown, Fields>({
     resolver: zodResolver(schema),
     defaultValues: {
       date: new Date().toISOString().slice(0, 10),
@@ -45,21 +62,21 @@ export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
       isAnonymous: false,
       ...defaultValues,
     },
-  })
-  const isAnonymous = watch("isAnonymous")
-  const donationType = watch("type")
+  });
+  const isAnonymous = watch("isAnonymous");
+  const donationType = watch("type");
 
   return (
     <form
       onSubmit={handleSubmit(async (data) => {
         try {
-          await onSubmit(data)
-          toast.success("Donation saved")
-          router.push("/donations")
+          await onSubmit(data);
+          toast.success("Donation saved");
+          router.push("/donations");
         } catch (e) {
-          const message = getErrorMessage(e)
-          setServerError(message)
-          toast.error(message)
+          const message = getErrorMessage(e);
+          setServerError(message);
+          toast.error(message);
         }
       })}
       className="space-y-4 max-w-lg"
@@ -71,7 +88,10 @@ export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
       {!isAnonymous && (
         <div className="space-y-1">
           <Label>Donor</Label>
-          <select {...register("donorId")} className="w-full border border-border rounded px-3 py-2 text-sm bg-background">
+          <select
+            {...register("donorId")}
+            className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+          >
             <option value="">Select donor…</option>
             {donors.map((d) => (
               <option key={d.id} value={d.id}>
@@ -83,7 +103,12 @@ export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
       )}
       <div className="space-y-1">
         <Label>Amount (PKR) *</Label>
-        <Input {...register("amount", { valueAsNumber: true })} type="number" step="0.01" placeholder="0" />
+        <Input
+          {...register("amount", { valueAsNumber: true })}
+          type="number"
+          step="0.01"
+          placeholder="0"
+        />
         {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
       </div>
       <div className="space-y-1">
@@ -94,17 +119,27 @@ export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <Label>Payment method</Label>
-          <select {...register("paymentMethod")} className="w-full border border-border rounded px-3 py-2 text-sm bg-background">
+          <select
+            {...register("paymentMethod")}
+            className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+          >
             {(["CASH", "BANK_TRANSFER", "EASYPAISA", "JAZZCASH", "OTHER"] as const).map((m) => (
-              <option key={m} value={m}>{m.replace(/_/g, " ")}</option>
+              <option key={m} value={m}>
+                {m.replace(/_/g, " ")}
+              </option>
             ))}
           </select>
         </div>
         <div className="space-y-1">
           <Label>Context</Label>
-          <select {...register("paymentContext")} className="w-full border border-border rounded px-3 py-2 text-sm bg-background">
+          <select
+            {...register("paymentContext")}
+            className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+          >
             {(["ZAKAT", "SADAQAH", "GENERAL", "OTHER"] as const).map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
           </select>
         </div>
@@ -116,17 +151,23 @@ export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
             <input type="radio" {...register("type")} value="POOLED" /> Pooled (general fund)
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input type="radio" {...register("type")} value="DESIGNATED" /> Designated for specific recipient
+            <input type="radio" {...register("type")} value="DESIGNATED" /> Designated for specific
+            recipient
           </label>
         </div>
       </div>
       {donationType === "DESIGNATED" && (
         <div className="space-y-1">
           <Label>Designated recipient</Label>
-          <select {...register("designatedRecipientId")} className="w-full border border-border rounded px-3 py-2 text-sm bg-background">
+          <select
+            {...register("designatedRecipientId")}
+            className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+          >
             <option value="">Select recipient…</option>
             {recipients.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
             ))}
           </select>
         </div>
@@ -147,5 +188,5 @@ export function DonationForm({ onSubmit, donors, recipients, defaultValues }: {
         </Button>
       </div>
     </form>
-  )
+  );
 }

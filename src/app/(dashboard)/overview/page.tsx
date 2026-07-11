@@ -1,38 +1,62 @@
-import { getDashboardData } from "./actions"
-import { StatCards } from "@/components/dashboard/stat-cards"
-import { RecentPanel } from "@/components/dashboard/recent-panel"
-import { MonthlyChart, type MonthData } from "@/components/dashboard/monthly-chart"
-import { Topbar } from "@/components/layout/topbar"
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { getDashboardData } from "./actions";
+import { StatCards } from "@/components/dashboard/stat-cards";
+import { RecentPanel } from "@/components/dashboard/recent-panel";
+import { MonthlyChart, type MonthData } from "@/components/dashboard/monthly-chart";
+import { Topbar } from "@/components/layout/topbar";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export default async function OverviewPage() {
-  const { session, totalRcv, totalDst, pool, desig, donations, distributions, recentDonations, recentDistributions, pendingZakat } = await getDashboardData()
+  const {
+    session,
+    totalRcv,
+    totalDst,
+    pool,
+    desig,
+    donations,
+    distributions,
+    recentDonations,
+    recentDistributions,
+    pendingZakat,
+  } = await getDashboardData();
 
-  const now = new Date()
+  const now = new Date();
   const monthData: MonthData[] = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
     const received = recentDonations
       .filter((x) => {
-        const xd = new Date(x.date)
-        return xd.getFullYear() === d.getFullYear() && xd.getMonth() === d.getMonth()
+        const xd = new Date(x.date);
+        return xd.getFullYear() === d.getFullYear() && xd.getMonth() === d.getMonth();
       })
-      .reduce((s, x) => s + Number(x.amount), 0)
+      .reduce((s, x) => s + Number(x.amount), 0);
     const distributed = recentDistributions
       .filter((x) => {
-        const xd = new Date(x.date)
-        return xd.getFullYear() === d.getFullYear() && xd.getMonth() === d.getMonth()
+        const xd = new Date(x.date);
+        return xd.getFullYear() === d.getFullYear() && xd.getMonth() === d.getMonth();
       })
-      .reduce((s, x) => s + Number(x.amount), 0)
-    return { month: MONTH_LABELS[d.getMonth()], received, distributed }
-  })
+      .reduce((s, x) => s + Number(x.amount), 0);
+    return { month: MONTH_LABELS[d.getMonth()], received, distributed };
+  });
 
   const zakatOverdue = pendingZakat.filter((d) => {
-    const spent = d.distributions.reduce((s, x) => s + Number(x.amount), 0)
-    return Number(d.amount) - spent > 0
-  })
+    const spent = d.distributions.reduce((s, x) => s + Number(x.amount), 0);
+    return Number(d.amount) - spent > 0;
+  });
 
   return (
     <>
@@ -40,7 +64,8 @@ export default async function OverviewPage() {
       <div className="p-6 space-y-6">
         {zakatOverdue.length > 0 && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-3 text-sm text-yellow-400">
-            ⚠ {zakatOverdue.length} Zakat donation{zakatOverdue.length > 1 ? "s" : ""} received over 40 days ago still have undistributed funds. Zakat should be distributed promptly.
+            ⚠ {zakatOverdue.length} Zakat donation{zakatOverdue.length > 1 ? "s" : ""} received over
+            40 days ago still have undistributed funds. Zakat should be distributed promptly.
           </div>
         )}
         <StatCards
@@ -50,7 +75,9 @@ export default async function OverviewPage() {
           designatedUnspent={desig}
         />
         <div>
-          <h2 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Last 6 Months</h2>
+          <h2 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
+            Last 6 Months
+          </h2>
           <MonthlyChart data={monthData} />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -81,7 +108,9 @@ export default async function OverviewPage() {
         </div>
         {session.user.role === "ADMIN" && (
           <div>
-            <h2 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Export Data</h2>
+            <h2 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
+              Export Data
+            </h2>
             <div className="flex flex-wrap gap-2">
               {(["donations", "distributions", "donors", "recipients"] as const).map((t) => (
                 <a
@@ -97,5 +126,5 @@ export default async function OverviewPage() {
         )}
       </div>
     </>
-  )
+  );
 }

@@ -1,16 +1,20 @@
-import { getRecipientHistory } from "../../actions"
-import { Topbar } from "@/components/layout/topbar"
-import { notFound } from "next/navigation"
-import Link from "next/link"
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { getRecipientHistory } from "../../actions";
+import { Topbar } from "@/components/layout/topbar";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export default async function RecipientHistoryPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const recipient = await getRecipientHistory(id).catch(() => null)
-  if (!recipient) notFound()
+export default async function RecipientHistoryPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const recipient = await getRecipientHistory(id).catch(() => null);
+  if (!recipient) notFound();
 
-  const total = recipient.distributions.reduce((s, d) => s + Number(d.amount), 0)
+  const total = recipient.distributions.reduce((s, d) => s + Number(d.amount), 0);
 
   return (
     <>
@@ -73,5 +77,5 @@ export default async function RecipientHistoryPage({ params }: { params: Promise
         )}
       </div>
     </>
-  )
+  );
 }

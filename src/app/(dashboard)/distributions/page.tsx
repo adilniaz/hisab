@@ -1,20 +1,20 @@
-import { getDistributions } from "./actions"
-import { DistributionTable } from "@/components/distributions/distribution-table"
-import { Topbar } from "@/components/layout/topbar"
-import { Button } from "@/components/ui/button"
-import { Pagination } from "@/components/ui/pagination"
-import Link from "next/link"
-import { requireAuth, canModify } from "@/lib/permissions"
+import { getDistributions } from "./actions";
+import { DistributionTable } from "@/components/distributions/distribution-table";
+import { Topbar } from "@/components/layout/topbar";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import Link from "next/link";
+import { requireAuth, canModify } from "@/lib/permissions";
 
 export default async function DistributionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const session = await requireAuth()
-  const { q, page: pageStr } = await searchParams
-  const page = Number(pageStr ?? "1")
-  const { items, total, pageSize } = await getDistributions({ q, page })
+  const session = await requireAuth();
+  const { q, page: pageStr } = await searchParams;
+  const page = Number(pageStr ?? "1");
+  const { items, total, pageSize } = await getDistributions({ q, page });
   return (
     <>
       <Topbar title="Distributions" />
@@ -35,8 +35,14 @@ export default async function DistributionsPage({
           )}
         </div>
         <DistributionTable distributions={items} />
-        <Pagination page={page} total={total} pageSize={pageSize} basePath="/distributions" params={{ q }} />
+        <Pagination
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          basePath="/distributions"
+          params={{ q }}
+        />
       </div>
     </>
-  )
+  );
 }

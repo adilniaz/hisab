@@ -1,16 +1,16 @@
-import { getDonorStatement } from "../../actions"
-import { Topbar } from "@/components/layout/topbar"
-import { notFound } from "next/navigation"
-import Link from "next/link"
-import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { getDonorStatement } from "../../actions";
+import { Topbar } from "@/components/layout/topbar";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default async function DonorStatementPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const donor = await getDonorStatement(id).catch(() => null)
-  if (!donor) notFound()
+  const { id } = await params;
+  const donor = await getDonorStatement(id).catch(() => null);
+  if (!donor) notFound();
 
-  const totalDonated = donor.donations.reduce((s, d) => s + Number(d.amount), 0)
+  const totalDonated = donor.donations.reduce((s, d) => s + Number(d.amount), 0);
 
   return (
     <>
@@ -40,7 +40,7 @@ export default async function DonorStatementPage({ params }: { params: Promise<{
         </div>
 
         {donor.donations.map((donation) => {
-          const distributed = donation.distributions.reduce((s, d) => s + Number(d.amount), 0)
+          const distributed = donation.distributions.reduce((s, d) => s + Number(d.amount), 0);
           return (
             <div key={donation.id} className="border border-border rounded-lg overflow-hidden">
               <div className="bg-card px-4 py-3 flex justify-between items-center">
@@ -49,7 +49,8 @@ export default async function DonorStatementPage({ params }: { params: Promise<{
                     PKR {Number(donation.amount).toLocaleString()}
                   </span>
                   <span className="text-muted-foreground text-sm ml-3">
-                    {new Date(donation.date).toLocaleDateString()} · {donation.paymentContext} · {donation.type}
+                    {new Date(donation.date).toLocaleDateString()} · {donation.paymentContext} ·{" "}
+                    {donation.type}
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground">
@@ -86,7 +87,7 @@ export default async function DonorStatementPage({ params }: { params: Promise<{
                 </p>
               )}
             </div>
-          )
+          );
         })}
 
         {donor.donations.length === 0 && (
@@ -94,5 +95,5 @@ export default async function DonorStatementPage({ params }: { params: Promise<{
         )}
       </div>
     </>
-  )
+  );
 }

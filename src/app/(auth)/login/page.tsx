@@ -1,27 +1,24 @@
-"use client"
-import { useState } from "react"
-import { loginAction } from "./actions"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+"use client";
+import { useState } from "react";
+import { loginAction } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-    const form = new FormData(e.currentTarget)
-    const result = await loginAction(
-      form.get("email") as string,
-      form.get("password") as string,
-    )
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const form = new FormData(e.currentTarget);
+    const result = await loginAction(form.get("email") as string, form.get("password") as string);
     if (result?.error) {
-      setError(result.error)
-      setLoading(false)
+      setError(result.error);
+      setLoading(false);
     }
   }
 
@@ -49,5 +46,5 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

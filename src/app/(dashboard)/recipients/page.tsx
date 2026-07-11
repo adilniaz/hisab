@@ -1,20 +1,20 @@
-import { getRecipients } from "./actions"
-import { RecipientTable } from "@/components/recipients/recipient-table"
-import { Topbar } from "@/components/layout/topbar"
-import { Button } from "@/components/ui/button"
-import { Pagination } from "@/components/ui/pagination"
-import Link from "next/link"
-import { requireAuth, canModify } from "@/lib/permissions"
+import { getRecipients } from "./actions";
+import { RecipientTable } from "@/components/recipients/recipient-table";
+import { Topbar } from "@/components/layout/topbar";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import Link from "next/link";
+import { requireAuth, canModify } from "@/lib/permissions";
 
 export default async function RecipientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const session = await requireAuth()
-  const { q, page: pageStr } = await searchParams
-  const page = Number(pageStr ?? "1")
-  const { items, total, pageSize } = await getRecipients({ q, page })
+  const session = await requireAuth();
+  const { q, page: pageStr } = await searchParams;
+  const page = Number(pageStr ?? "1");
+  const { items, total, pageSize } = await getRecipients({ q, page });
   return (
     <>
       <Topbar title="Recipients" />
@@ -35,8 +35,14 @@ export default async function RecipientsPage({
           )}
         </div>
         <RecipientTable recipients={items} />
-        <Pagination page={page} total={total} pageSize={pageSize} basePath="/recipients" params={{ q }} />
+        <Pagination
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          basePath="/recipients"
+          params={{ q }}
+        />
       </div>
     </>
-  )
+  );
 }

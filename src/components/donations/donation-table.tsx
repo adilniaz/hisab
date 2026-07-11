@@ -1,16 +1,16 @@
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import type { Donation, Donor } from "@prisma/client"
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import type { Donation, Donor } from "@prisma/client";
 
 type Row = Donation & {
-  donor: Donor | null
-  designatedRecipient: { name: string } | null
-  recordedBy: { name: string }
-}
+  donor: Donor | null;
+  designatedRecipient: { name: string } | null;
+  recordedBy: { name: string };
+};
 
 export function DonationTable({ donations }: { donations: Row[] }) {
   if (donations.length === 0) {
-    return <p className="text-sm text-muted-foreground p-4">No donations yet.</p>
+    return <p className="text-sm text-muted-foreground p-4">No donations yet.</p>;
   }
   return (
     <table className="w-full text-sm">
@@ -44,12 +44,10 @@ export function DonationTable({ donations }: { donations: Row[] }) {
                 ? `Designated → ${d.designatedRecipient?.name ?? "—"}`
                 : "Pooled"}
             </td>
-            <td className="py-2 text-muted-foreground">
-              {d.paymentMethod.replace(/_/g, " ")}
-            </td>
+            <td className="py-2 text-muted-foreground">{d.paymentMethod.replace(/_/g, " ")}</td>
           </tr>
         ))}
       </tbody>
     </table>
-  )
+  );
 }

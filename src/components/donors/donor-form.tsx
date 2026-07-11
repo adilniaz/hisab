@@ -1,15 +1,15 @@
-"use client"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { getErrorMessage } from "@/lib/utils"
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { getErrorMessage } from "@/lib/utils";
 
 const schema = z.object({
   name: z.string().optional(),
@@ -19,36 +19,39 @@ const schema = z.object({
   address: z.string().optional(),
   isRecurring: z.boolean().default(false),
   notes: z.string().optional(),
-})
-type Fields = z.infer<typeof schema>
+});
+type Fields = z.infer<typeof schema>;
 
 interface DonorFormProps {
-  onSubmit: (data: Fields) => Promise<void>
-  defaultValues?: Partial<Fields>
+  onSubmit: (data: Fields) => Promise<void>;
+  defaultValues?: Partial<Fields>;
 }
 
 export function DonorForm({ onSubmit, defaultValues }: DonorFormProps) {
-  const router = useRouter()
-  const [serverError, setServerError] = useState("")
+  const router = useRouter();
+  const [serverError, setServerError] = useState("");
   const {
     register,
     handleSubmit,
     watch,
     formState: { isSubmitting },
-  } = useForm<z.input<typeof schema>, unknown, Fields>({ resolver: zodResolver(schema), defaultValues })
-  const isAnonymous = watch("isAnonymous")
+  } = useForm<z.input<typeof schema>, unknown, Fields>({
+    resolver: zodResolver(schema),
+    defaultValues,
+  });
+  const isAnonymous = watch("isAnonymous");
 
   return (
     <form
       onSubmit={handleSubmit(async (data) => {
         try {
-          await onSubmit(data)
-          toast.success("Donor saved")
-          router.push("/donors")
+          await onSubmit(data);
+          toast.success("Donor saved");
+          router.push("/donors");
         } catch (e) {
-          const message = getErrorMessage(e)
-          setServerError(message)
-          toast.error(message)
+          const message = getErrorMessage(e);
+          setServerError(message);
+          toast.error(message);
         }
       })}
       className="space-y-4 max-w-lg"
@@ -95,5 +98,5 @@ export function DonorForm({ onSubmit, defaultValues }: DonorFormProps) {
         </Button>
       </div>
     </form>
-  )
+  );
 }

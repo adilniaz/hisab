@@ -1,20 +1,20 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 export interface RecentItem {
-  id: string
-  label: string
-  meta: string
-  amount: number
-  tag: string
-  direction: "in" | "out"
+  id: string;
+  label: string;
+  meta: string;
+  amount: number;
+  tag: string;
+  direction: "in" | "out";
 }
 
 interface RecentPanelProps {
-  title: string
-  items: RecentItem[]
-  viewAllHref: string
+  title: string;
+  items: RecentItem[];
+  viewAllHref: string;
 }
 
 export function RecentPanel({ title, items, viewAllHref }: RecentPanelProps) {
@@ -27,9 +27,7 @@ export function RecentPanel({ title, items, viewAllHref }: RecentPanelProps) {
         </Link>
       </CardHeader>
       <CardContent className="p-0">
-        {items.length === 0 && (
-          <p className="p-4 text-xs text-muted-foreground">No records yet.</p>
-        )}
+        {items.length === 0 && <p className="p-4 text-xs text-muted-foreground">No records yet.</p>}
         {items.map((item) => (
           <div
             key={item.id}
@@ -40,7 +38,9 @@ export function RecentPanel({ title, items, viewAllHref }: RecentPanelProps) {
               <p className="text-xs text-muted-foreground">{item.meta}</p>
             </div>
             <div className="text-right">
-              <p className={`font-semibold ${item.direction === "in" ? "text-green-400" : "text-red-400"}`}>
+              <p
+                className={`font-semibold ${item.direction === "in" ? "text-green-400" : "text-red-400"}`}
+              >
                 {item.direction === "in" ? "+" : "−"}PKR {item.amount.toLocaleString()}
               </p>
               <Badge variant="outline" className="text-[10px] mt-0.5">
@@ -51,5 +51,5 @@ export function RecentPanel({ title, items, viewAllHref }: RecentPanelProps) {
         ))}
       </CardContent>
     </Card>
-  )
+  );
 }

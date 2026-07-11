@@ -1,13 +1,13 @@
-import { requireAuth } from "@/lib/permissions"
-import { getUsers } from "./actions"
-import { UserTable } from "@/components/users/user-table"
-import { Topbar } from "@/components/layout/topbar"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { requireAuth } from "@/lib/permissions";
+import { getUsers } from "./actions";
+import { UserTable } from "@/components/users/user-table";
+import { Topbar } from "@/components/layout/topbar";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function UsersPage() {
-  await requireAuth({ roles: ['ADMIN'] })
-  const users = await getUsers()
+  await requireAuth({ roles: ["ADMIN"] });
+  const users = await getUsers();
   return (
     <>
       <Topbar title="Users & Access" />
@@ -20,5 +20,5 @@ export default async function UsersPage() {
         <UserTable users={users} />
       </div>
     </>
-  )
+  );
 }

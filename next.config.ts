@@ -25,12 +25,9 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
+          // The remaining security headers (X-Frame-Options, HSTS, etc.) are
+          // set by src/proxy.ts — the standardized cross-project location.
           { key: "Content-Security-Policy", value: cspHeader.replace(/\n/g, "") },
-          { key: "X-Frame-Options", value: "DENY" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "origin-when-cross-origin" },
-          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
     ];

@@ -1,21 +1,28 @@
-"use client"
-import { useEffect, useState } from "react"
-import { getAllDonors, getAllRecipients } from "./actions"
-import { Topbar } from "@/components/layout/topbar"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+"use client";
+import { useEffect, useState } from "react";
+import { getAllDonors, getAllRecipients } from "./actions";
+import { Topbar } from "@/components/layout/topbar";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface Donor { id: string; name: string | null; isAnonymous: boolean }
-interface Recipient { id: string; name: string }
+interface Donor {
+  id: string;
+  name: string | null;
+  isAnonymous: boolean;
+}
+interface Recipient {
+  id: string;
+  name: string;
+}
 
 export default function ReportsPage() {
-  const [donors, setDonors] = useState<Donor[]>([])
-  const [recipients, setRecipients] = useState<Recipient[]>([])
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
 
   useEffect(() => {
-    getAllDonors().then(setDonors)
-    getAllRecipients().then(setRecipients)
-  }, [])
+    getAllDonors().then(setDonors);
+    getAllRecipients().then(setRecipients);
+  }, []);
 
   return (
     <>
@@ -33,7 +40,7 @@ export default function ReportsPage() {
               <select
                 className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
                 onChange={(e) => {
-                  if (e.target.value) window.location.href = `/reports/donor/${e.target.value}`
+                  if (e.target.value) window.location.href = `/reports/donor/${e.target.value}`;
                 }}
               >
                 <option value="">Select donor…</option>
@@ -56,12 +63,14 @@ export default function ReportsPage() {
               <select
                 className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
                 onChange={(e) => {
-                  if (e.target.value) window.location.href = `/reports/recipient/${e.target.value}`
+                  if (e.target.value) window.location.href = `/reports/recipient/${e.target.value}`;
                 }}
               >
                 <option value="">Select recipient…</option>
                 {recipients.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
                 ))}
               </select>
             </CardContent>
@@ -82,5 +91,5 @@ export default function ReportsPage() {
         </div>
       </div>
     </>
-  )
+  );
 }
