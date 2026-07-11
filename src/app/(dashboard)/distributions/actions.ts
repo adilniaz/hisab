@@ -142,9 +142,17 @@ export async function getDistribution(id: string) {
 }
 
 export async function getDesignatedDonationsForRecipient(recipientId: string) {
-  await requireAuth();
+  const session = await requireAuth();
+  // Audit H2: a RESTRICTED user must not be able to enumerate designated
+  // donations for recipients outside their scope.
+  const scopeWhere = recipientFilter(session);
   const donations = await prisma.donation.findMany({
-    where: { type: "DESIGNATED", designatedRecipientId: recipientId, deletedAt: null },
+    where: {
+      type: "DESIGNATED",
+      designatedRecipientId: recipientId,
+      deletedAt: null,
+      ...(Object.keys(scopeWhere).length ? { designatedRecipient: scopeWhere } : {}),
+    },
     select: { id: true, amount: true, date: true },
   });
   if (donations.length === 0) return [];

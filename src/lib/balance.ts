@@ -3,14 +3,24 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 
 type QueryClient = Pick<PrismaClient, "donation" | "distribution"> | Prisma.TransactionClient;
 
+// Optional extra where-clauses so scoped views (e.g. the dashboard for a
+// RESTRICTED user) can narrow the aggregates. Balance-guard callers inside
+// Serializable transactions must NOT pass a scope — a distribution's validity
+// depends on the true org-wide balance.
+export interface BalanceScope {
+  donation?: Prisma.DonationWhereInput;
+  distribution?: Prisma.DistributionWhereInput;
+}
+
 export async function getPoolBalance(
   client: QueryClient = defaultDb,
   excludeDistributionId?: string,
+  scope: BalanceScope = {},
 ): Promise<number> {
   const [pooled, distributed] = await Promise.all([
     client.donation.aggregate({
       _sum: { amount: true },
-      where: { type: "POOLED", deletedAt: null },
+      where: { type: "POOLED", deletedAt: null, ...scope.donation },
     }),
     client.distribution.aggregate({
       _sum: { amount: true },
@@ -18,15 +28,19 @@ export async function getPoolBalance(
         donationId: null,
         deletedAt: null,
         ...(excludeDistributionId ? { id: { not: excludeDistributionId } } : {}),
+        ...scope.distribution,
       },
     }),
   ]);
   return Number(pooled._sum.amount ?? 0) - Number(distributed._sum.amount ?? 0);
 }
 
-export async function getDesignatedUnspent(client: QueryClient = defaultDb): Promise<number> {
+export async function getDesignatedUnspent(
+  client: QueryClient = defaultDb,
+  scope: BalanceScope = {},
+): Promise<number> {
   const donations = await client.donation.findMany({
-    where: { type: "DESIGNATED", deletedAt: null },
+    where: { type: "DESIGNATED", deletedAt: null, ...scope.donation },
     select: { id: true, amount: true },
   });
   if (donations.length === 0) return 0;

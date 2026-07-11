@@ -19,7 +19,10 @@ vi.mock("@/lib/permissions", () => ({
 import { prisma } from "@/lib/prisma";
 import { donorFilter, recipientFilter } from "@/lib/permissions";
 import { getDonation } from "@/app/(dashboard)/donations/actions";
-import { getDistribution } from "@/app/(dashboard)/distributions/actions";
+import {
+  getDistribution,
+  getDesignatedDonationsForRecipient,
+} from "@/app/(dashboard)/distributions/actions";
 import {
   getDonorStatement,
   getRecipientHistory,
@@ -123,6 +126,28 @@ describe("scope enforcement on single-record reads (IDOR regression)", () => {
     expect(prisma.distribution.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ recipient: restrictedFilter }) }),
     );
+  });
+
+  it("getDesignatedDonationsForRecipient scopes by designatedRecipient (audit H2 regression)", async () => {
+    vi.mocked(recipientFilter).mockReturnValue(restrictedFilter);
+    vi.mocked(prisma.donation.findMany).mockResolvedValue([]);
+    await getDesignatedDonationsForRecipient("rec1");
+    expect(prisma.donation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          designatedRecipientId: "rec1",
+          designatedRecipient: restrictedFilter,
+        }),
+      }),
+    );
+  });
+
+  it("getDesignatedDonationsForRecipient applies no scope filter for ALL scope", async () => {
+    vi.mocked(recipientFilter).mockReturnValue({});
+    vi.mocked(prisma.donation.findMany).mockResolvedValue([]);
+    await getDesignatedDonationsForRecipient("rec1");
+    const where = vi.mocked(prisma.donation.findMany).mock.calls[0]![0]!.where;
+    expect(where).not.toHaveProperty("designatedRecipient");
   });
 
   it("getAuditReport applies no scope filter when donorFilter/recipientFilter return {} (ALL scope)", async () => {

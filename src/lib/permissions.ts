@@ -39,3 +39,16 @@ export function recipientFilter(session: Session): Prisma.RecipientWhereInput {
   if (session.user.scopeType === "ALL") return {};
   return { userScopes: { some: { userId: session.user.id } } };
 }
+
+// Scope filters lifted to the Donation/Distribution level (via their donor /
+// recipient relations). For RESTRICTED users this also excludes donor-less
+// (anonymous) donations — those belong to no one's scope.
+export function donationFilter(session: Session): Prisma.DonationWhereInput {
+  if (session.user.scopeType === "ALL") return {};
+  return { donor: { userScopes: { some: { userId: session.user.id } } } };
+}
+
+export function distributionFilter(session: Session): Prisma.DistributionWhereInput {
+  if (session.user.scopeType === "ALL") return {};
+  return { recipient: { userScopes: { some: { userId: session.user.id } } } };
+}

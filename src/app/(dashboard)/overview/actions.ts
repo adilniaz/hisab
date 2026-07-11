@@ -1,11 +1,16 @@
 "use server";
 
-import { requireAuth } from "@/lib/permissions";
+import { requireAuth, donationFilter, distributionFilter } from "@/lib/permissions";
 import { getPoolBalance, getDesignatedUnspent } from "@/lib/balance";
 import { prisma } from "@/lib/prisma";
 
 export async function getDashboardData() {
   const session = await requireAuth();
+
+  // RESTRICTED users only see aggregates over their scoped donors/recipients
+  // (audit H1: the dashboard previously leaked org-wide totals).
+  const donationWhere = donationFilter(session);
+  const distributionWhere = distributionFilter(session);
 
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
@@ -26,28 +31,37 @@ export async function getDashboardData() {
     recentDistributions,
     pendingZakat,
   ] = await Promise.all([
-    prisma.donation.aggregate({ _sum: { amount: true }, where: { deletedAt: null } }),
-    prisma.distribution.aggregate({ _sum: { amount: true }, where: { deletedAt: null } }),
-    getPoolBalance(),
-    getDesignatedUnspent(),
+    prisma.donation.aggregate({
+      _sum: { amount: true },
+      where: { deletedAt: null, ...donationWhere },
+    }),
+    prisma.distribution.aggregate({
+      _sum: { amount: true },
+      where: { deletedAt: null, ...distributionWhere },
+    }),
+    getPoolBalance(prisma, undefined, {
+      donation: donationWhere,
+      distribution: distributionWhere,
+    }),
+    getDesignatedUnspent(prisma, { donation: donationWhere }),
     prisma.donation.findMany({
       take: 5,
       orderBy: { date: "desc" },
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...donationWhere },
       include: { donor: true },
     }),
     prisma.distribution.findMany({
       take: 5,
       orderBy: { date: "desc" },
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...distributionWhere },
       include: { recipient: true },
     }),
     prisma.donation.findMany({
-      where: { date: { gte: sixMonthsAgo }, deletedAt: null },
+      where: { date: { gte: sixMonthsAgo }, deletedAt: null, ...donationWhere },
       select: { date: true, amount: true },
     }),
     prisma.distribution.findMany({
-      where: { date: { gte: sixMonthsAgo }, deletedAt: null },
+      where: { date: { gte: sixMonthsAgo }, deletedAt: null, ...distributionWhere },
       select: { date: true, amount: true },
     }),
     prisma.donation.findMany({
@@ -55,6 +69,7 @@ export async function getDashboardData() {
         paymentContext: "ZAKAT",
         deletedAt: null,
         date: { lte: fortyDaysAgo },
+        ...donationWhere,
       },
       select: {
         id: true,
