@@ -32,9 +32,10 @@ yarn-error.log*
 
 # env files
 .env
+.env.test
 .env.local
 .env.*.local
-# .env.example is intentionally committed
+# .env.example and .env.test.example are intentionally committed
 
 # vercel
 .vercel

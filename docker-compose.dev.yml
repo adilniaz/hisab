@@ -14,6 +14,18 @@ services:
     volumes:
       - hisab-pgdata-dev:/var/lib/postgresql/data
 
+  # Ephemeral Postgres for `npm test` (integration tests, port 5433).
+  db_test:
+    image: postgres:16-alpine
+    container_name: hisab-db-test
+    environment:
+      POSTGRES_USER: hisab
+      POSTGRES_PASSWORD: hisab
+      POSTGRES_DB: hisab_test
+    ports: ["5434:5432"]
+    tmpfs:
+      - /var/lib/postgresql/data
+
   app:
     build:
       context: .
