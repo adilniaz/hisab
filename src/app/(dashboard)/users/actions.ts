@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 
+const PAGE_SIZE = 25;
+
 const UserSchema = z.object({
   name: z.string().min(1, "Name required"),
   email: z.string().email("Valid email required"),
@@ -60,12 +62,19 @@ export async function setUserScope(userId: string, donorIds: string[], recipient
   revalidatePath(`/users/${userId}`);
 }
 
-export async function getUsers() {
+export async function getUsers(params: { page?: number } = {}) {
   await requireAuth({ roles: ["ADMIN"] });
-  return prisma.user.findMany({
-    orderBy: { createdAt: "asc" },
-    include: { _count: { select: { userScopes: true } } },
-  });
+  const page = params.page ?? 1;
+  const [items, total] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+      include: { _count: { select: { userScopes: true } } },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.user.count(),
+  ]);
+  return { items, total, page, pageSize: PAGE_SIZE };
 }
 
 export async function getUserWithScope(id: string) {

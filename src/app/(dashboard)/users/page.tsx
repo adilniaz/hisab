@@ -3,11 +3,18 @@ import { getUsers } from "./actions";
 import { UserTable } from "@/components/users/user-table";
 import { Topbar } from "@/components/layout/topbar";
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 import Link from "next/link";
 
-export default async function UsersPage() {
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireAuth({ roles: ["ADMIN"] });
-  const users = await getUsers();
+  const { page: pageStr } = await searchParams;
+  const page = Number(pageStr ?? "1");
+  const { items, total, pageSize } = await getUsers({ page });
   return (
     <>
       <Topbar title="Users & Access" />
@@ -17,7 +24,8 @@ export default async function UsersPage() {
             <Button size="sm">Add User</Button>
           </Link>
         </div>
-        <UserTable users={users} />
+        <UserTable users={items} />
+        <Pagination page={page} total={total} pageSize={pageSize} basePath="/users" params={{}} />
       </div>
     </>
   );

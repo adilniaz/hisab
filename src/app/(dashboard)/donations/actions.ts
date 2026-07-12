@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const PAGE_SIZE = 25;
+// getDonorsForPicker feeds a plain <select> (see donations/new, [id]/edit pages),
+// not a paginated table — bounded rather than paged.
+const PICKER_LIMIT = 500;
 
 const DonationSchema = z.object({
   donorId: z.string().uuid().optional().or(z.literal("")),
@@ -137,5 +140,6 @@ export async function getDonorsForPicker() {
     where: { deletedAt: null, ...scopeWhere },
     select: { id: true, name: true, isAnonymous: true },
     orderBy: { name: "asc" },
+    take: PICKER_LIMIT,
   });
 }

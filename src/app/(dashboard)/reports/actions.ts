@@ -2,6 +2,11 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, donorFilter, recipientFilter } from "@/lib/permissions";
 
+// getAllDonors/getAllRecipients feed a plain <select> picker (see reports/page.tsx),
+// not a paginated table — bounded rather than paged so the dropdown stays workable
+// even if the org's donor/recipient count grows well beyond normal use.
+const PICKER_LIMIT = 500;
+
 export async function getDonorStatement(donorId: string) {
   const session = await requireAuth();
   const scopeWhere = donorFilter(session);
@@ -79,6 +84,7 @@ export async function getAllDonors() {
     where: { deletedAt: null, ...scopeWhere },
     select: { id: true, name: true, isAnonymous: true },
     orderBy: { name: "asc" },
+    take: PICKER_LIMIT,
   });
 }
 
@@ -89,5 +95,6 @@ export async function getAllRecipients() {
     where: { isActive: true, deletedAt: null, ...scopeWhere },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
+    take: PICKER_LIMIT,
   });
 }
