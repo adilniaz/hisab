@@ -4,6 +4,7 @@ import { compare, hashSync } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
+import { isLockedOut, recordFailedAttempt, resetLockout } from "@/lib/account-lockout";
 import type { Role, ScopeType } from "@prisma/client";
 
 // Used to keep authorize()'s response time consistent whether or not the
@@ -44,13 +45,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         const user = await prisma.user.findUnique({ where: { email } });
         const valid = await compare(String(credentials.password), user?.passwordHash ?? DUMMY_HASH);
+        const locked = user ? isLockedOut(user) : false;
+
         if (!user || !valid) {
-          logAudit({ event: "LOGIN_FAILURE", email });
+          if (user && !locked) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: recordFailedAttempt(user.failedAttempts),
+            });
+          }
+          logAudit({
+            event: "LOGIN_FAILURE",
+            email,
+            ...(locked ? { details: { reason: "locked" } } : {}),
+          });
+          return null;
+        }
+        if (locked) {
+          logAudit({ event: "LOGIN_FAILURE", email, details: { reason: "locked" } });
           return null;
         }
         if (!user.active) {
           logAudit({ event: "LOGIN_FAILURE", email, details: { reason: "inactive" } });
           return null;
+        }
+        if (user.failedAttempts > 0) {
+          await prisma.user.update({ where: { id: user.id }, data: resetLockout() });
         }
         logAudit({ event: "LOGIN_SUCCESS", email: user.email, details: { role: user.role } });
         return {

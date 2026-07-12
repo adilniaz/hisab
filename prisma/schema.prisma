@@ -47,18 +47,20 @@ enum RecipientCategory {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  name          String
-  email         String         @unique
-  passwordHash  String
-  role          Role
-  scopeType     ScopeType
-  active        Boolean        @default(true)
-  tokenVersion  Int            @default(0)
-  createdAt     DateTime       @default(now())
-  donations     Donation[]     @relation("RecordedDonations")
-  distributions Distribution[] @relation("RecordedDistributions")
-  userScopes    UserScope[]
+  id             String         @id @default(uuid())
+  name           String
+  email          String         @unique
+  passwordHash   String
+  role           Role
+  scopeType      ScopeType
+  active         Boolean        @default(true)
+  tokenVersion   Int            @default(0)
+  failedAttempts Int            @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime       @default(now())
+  donations      Donation[]     @relation("RecordedDonations")
+  distributions  Distribution[] @relation("RecordedDistributions")
+  userScopes     UserScope[]
 }
 
 model Donor {
