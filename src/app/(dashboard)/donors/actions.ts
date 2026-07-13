@@ -5,9 +5,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const PAGE_SIZE = 25;
-// getDonorsForPicker feeds a plain <select>, not a paginated table — bounded
-// rather than paged.
-const PICKER_LIMIT = 500;
 
 const DonorSchema = z.object({
   name: z.string().optional(),
@@ -76,16 +73,5 @@ export async function getDonor(id: string) {
         include: { recordedBy: { select: { name: true } } },
       },
     },
-  });
-}
-
-export async function getDonorsForPicker() {
-  const session = await requireAuth();
-  const scopeWhere = donorFilter(session);
-  return prisma.donor.findMany({
-    where: { deletedAt: null, ...scopeWhere },
-    select: { id: true, name: true, isAnonymous: true },
-    orderBy: { name: "asc" },
-    take: PICKER_LIMIT,
   });
 }
