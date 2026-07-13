@@ -73,20 +73,20 @@ second one.
 | `npm run start` | Start the prod stack via Docker Compose |
 | `npm run build` | `next build` (used inside the prod Docker image) |
 | `npm run lint` | ESLint |
-| `npm test` / `npm run test:run` | Vitest (watch mode / single run) |
+| `npm test` / `npm run test:watch` | Vitest (single run / watch mode) |
 | `npm run db:seed` | Seed the database (`prisma/seed.ts`) |
 
 ## Testing
 
 ```bash
-npm run test:run
+npm test
 ```
 
-Unit tests live under `tests/`, mirroring the `app/`/`lib/` structure. Server actions are tested by mocking `@/lib/db` and `@/lib/permissions`; `tests/helpers/session.ts` provides a shared typed session builder. See [AGENTS.md](./AGENTS.md) for the conventions these tests follow.
+Unit tests live under `tests/`, mirroring the `src/app/`/`src/lib/` structure. Server actions are tested by mocking `@/lib/prisma` and `@/lib/permissions`; `tests/helpers/session.ts` provides a shared typed session builder. `tests/integration/` also has DB-integration tests (need `docker compose -f docker-compose.dev.yml up -d db_test` running first). See [AGENTS.md](./AGENTS.md) for the conventions these tests follow.
 
 ## Database
 
-Schema and migrations live under `prisma/`. Roles (`ADMIN`/`DATA_ENTRY`/`VIEWER`) and data scoping (`ALL`/`RESTRICTED` via `UserScope`) are enforced in `lib/permissions.ts`, not just in the UI. Most models use soft deletes (`deletedAt`) rather than hard deletes.
+Schema and migrations live under `prisma/`. Roles (`ADMIN`/`DATA_ENTRY`/`VIEWER`) and data scoping (`ALL`/`RESTRICTED` via `UserScope`) are enforced in `src/lib/permissions.ts`, not just in the UI. Most models use soft deletes (`deletedAt`) rather than hard deletes.
 
 ## Security
 
