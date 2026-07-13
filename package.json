@@ -12,7 +12,10 @@
     "test:watch": "vitest",
     "lint": "eslint",
     "format": "prettier --write src/ tests/",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:generate": "prisma generate"
   },
   "prettier": {
     "semi": true,
