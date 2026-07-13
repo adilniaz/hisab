@@ -60,6 +60,11 @@ npm run start
 
 Runs `docker compose up --build` — builds a standalone production image and starts it alongside Postgres. Requires `AUTH_SECRET` and `POSTGRES_PASSWORD` to be set in `.env` (see above); the compose file refuses to start with the old placeholder values.
 
+For an internet-facing deploy behind Caddy (TLS termination, HSTS), see
+`../CADDY-DEPLOYMENT.md` (shared with bake_em_up/cookbook) — this app
+already sends its own HSTS header (`src/proxy.ts`), so Caddy shouldn't add a
+second one.
+
 ## Available scripts
 
 | Script | What it does |
