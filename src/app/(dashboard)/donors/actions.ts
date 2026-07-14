@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, canModify, donorFilter } from "@/lib/permissions";
+import { requireAuth, canModify, donorFilter, assertDonorInScope } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -27,6 +27,7 @@ export async function createDonor(data: z.infer<typeof DonorSchema>) {
 export async function updateDonor(id: string, data: z.infer<typeof DonorSchema>) {
   const session = await requireAuth();
   if (!canModify(session)) throw new Error("Unauthorized");
+  await assertDonorInScope(session, id);
   const parsed = DonorSchema.parse(data);
   await prisma.donor.update({ where: { id }, data: { ...parsed, email: parsed.email || null } });
   revalidatePath("/donors");

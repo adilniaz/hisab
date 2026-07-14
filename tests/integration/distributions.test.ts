@@ -139,4 +139,38 @@ describe("distributions actions — DB integration", () => {
     const outOfScope = await getDesignatedDonationsForRecipient(recipientOutOfScopeId);
     expect(outOfScope).toHaveLength(0);
   });
+
+  it("blocks a RESTRICTED user from distributing to an out-of-scope recipient", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(
+      session({ id: restrictedId, role: "DATA_ENTRY", scopeType: "RESTRICTED" }),
+    );
+
+    await expect(
+      createDistribution({
+        recipientId: recipientOutOfScopeId,
+        amount: 100,
+        date: "2026-01-05",
+        purpose: "Groceries",
+        donationId: "",
+        notes: "",
+      }),
+    ).rejects.toThrow("Unauthorized");
+    expect(await prisma.distribution.count()).toBe(0);
+  });
+
+  it("allows a RESTRICTED user to distribute to an in-scope recipient", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(
+      session({ id: restrictedId, role: "DATA_ENTRY", scopeType: "RESTRICTED" }),
+    );
+
+    await createDistribution({
+      recipientId: recipientInScopeId,
+      amount: 100,
+      date: "2026-01-05",
+      purpose: "Groceries",
+      donationId,
+      notes: "",
+    });
+    expect(await prisma.distribution.count()).toBe(1);
+  });
 });

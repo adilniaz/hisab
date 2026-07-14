@@ -10,6 +10,7 @@ vi.mock("@/lib/permissions", async (importOriginal) => {
 import { GET } from "@/app/api/export/route";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
+import { resetRateLimit } from "@/lib/rate-limit";
 import { resetDb } from "../helpers/db";
 
 function adminSession(): Session {
@@ -36,6 +37,7 @@ describe("GET /api/export — DB integration", () => {
   beforeEach(async () => {
     await resetDb();
     vi.clearAllMocks();
+    resetRateLimit("export:admin-1");
     const admin = await prisma.user.create({
       data: { name: "Admin", email: "admin@t.com", passwordHash: "x", role: "ADMIN", scopeType: "ALL" },
     });
@@ -122,5 +124,62 @@ describe("GET /api/export — DB integration", () => {
   it("propagates a requireAuth rejection (redirect) instead of returning data", async () => {
     vi.mocked(requireAuth).mockRejectedValue(new Error("NEXT_REDIRECT"));
     await expect(GET(reqFor("donations"))).rejects.toThrow("NEXT_REDIRECT");
+  });
+
+  it("scopes exports for a RESTRICTED admin to their assigned donors", async () => {
+    const inScope = await prisma.donor.create({ data: { name: "InScopeDonor" } });
+    const outOfScope = await prisma.donor.create({ data: { name: "OutOfScopeDonor" } });
+    const restricted = await prisma.user.create({
+      data: {
+        name: "RestrictedAdmin",
+        email: "radmin@t.com",
+        passwordHash: "x",
+        role: "ADMIN",
+        scopeType: "RESTRICTED",
+      },
+    });
+    await prisma.userScope.create({ data: { userId: restricted.id, donorId: inScope.id } });
+    for (const donorId of [inScope.id, outOfScope.id]) {
+      await prisma.donation.create({
+        data: {
+          donorId,
+          amount: 100,
+          date: new Date("2026-01-05"),
+          paymentMethod: "CASH",
+          paymentContext: "GENERAL",
+          type: "POOLED",
+          recordedById: adminId,
+        },
+      });
+    }
+    resetRateLimit(`export:${restricted.id}`);
+    vi.mocked(requireAuth).mockResolvedValue({
+      user: {
+        id: restricted.id,
+        name: "RestrictedAdmin",
+        email: "radmin@t.com",
+        role: "ADMIN",
+        scopeType: "RESTRICTED",
+        tokenVersion: 0,
+      } as unknown as Session["user"],
+      expires: "2099-01-01",
+    });
+
+    const donationsCsv = await (await GET(reqFor("donations"))).text();
+    expect(donationsCsv).toContain("InScopeDonor");
+    expect(donationsCsv).not.toContain("OutOfScopeDonor");
+
+    const donorsCsv = await (await GET(reqFor("donors"))).text();
+    expect(donorsCsv).toContain("InScopeDonor");
+    expect(donorsCsv).not.toContain("OutOfScopeDonor");
+  });
+
+  it("rate-limits repeated exports per admin", async () => {
+    for (let i = 0; i < 10; i++) {
+      const res = await GET(reqFor("donations"));
+      expect(res.status).toBe(200);
+    }
+    const blocked = await GET(reqFor("donations"));
+    expect(blocked.status).toBe(429);
   });
 });

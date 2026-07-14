@@ -5,6 +5,7 @@ vi.mock("@/lib/permissions", () => ({
   requireAuth: vi.fn(),
   canModify: vi.fn(),
   recipientFilter: vi.fn().mockReturnValue({}),
+  assertRecipientInScope: vi.fn(),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 

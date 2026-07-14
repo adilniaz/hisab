@@ -1,6 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, canModify, donorFilter } from "@/lib/permissions";
+import {
+  requireAuth,
+  canModify,
+  donorFilter,
+  assertDonorInScope,
+  assertRecipientInScope,
+} from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -9,34 +15,50 @@ const PAGE_SIZE = 25;
 // not a paginated table — bounded rather than paged.
 const PICKER_LIMIT = 500;
 
-const DonationSchema = z.object({
-  donorId: z.string().uuid().optional().or(z.literal("")),
-  isAnonymous: z.boolean().default(false),
-  amount: z.coerce.number().positive("Amount must be positive"),
-  date: z.string().min(1, "Date required"),
-  paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "EASYPAISA", "JAZZCASH", "OTHER"]),
-  paymentContext: z.enum(["ZAKAT", "SADAQAH", "GENERAL", "OTHER"]),
-  type: z.enum(["POOLED", "DESIGNATED"]),
-  designatedRecipientId: z.string().uuid().optional().or(z.literal("")),
-  notes: z.string().optional(),
-});
+const DonationSchema = z
+  .object({
+    donorId: z.string().uuid().optional().or(z.literal("")),
+    isAnonymous: z.boolean().default(false),
+    amount: z.coerce.number().positive("Amount must be positive"),
+    date: z.string().min(1, "Date required"),
+    paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "EASYPAISA", "JAZZCASH", "OTHER"]),
+    paymentContext: z.enum(["ZAKAT", "SADAQAH", "GENERAL", "OTHER"]),
+    type: z.enum(["POOLED", "DESIGNATED"]),
+    designatedRecipientId: z.string().uuid().optional().or(z.literal("")),
+    notes: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // A DESIGNATED donation without a recipient would be counted as
+    // "unspent designated funds" forever — require the recipient up front.
+    if (data.type === "DESIGNATED" && !data.designatedRecipientId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["designatedRecipientId"],
+        message: "Recipient required for designated donations",
+      });
+    }
+  });
 
 export async function createDonation(data: z.infer<typeof DonationSchema>) {
   const session = await requireAuth();
   if (!canModify(session)) throw new Error("Unauthorized");
   const parsed = DonationSchema.parse(data);
+  const donorId = parsed.isAnonymous || !parsed.donorId ? null : parsed.donorId;
+  const designatedRecipientId =
+    parsed.type === "DESIGNATED" && parsed.designatedRecipientId
+      ? parsed.designatedRecipientId
+      : null;
+  if (donorId) await assertDonorInScope(session, donorId);
+  if (designatedRecipientId) await assertRecipientInScope(session, designatedRecipientId);
   await prisma.donation.create({
     data: {
-      donorId: parsed.isAnonymous || !parsed.donorId ? null : parsed.donorId,
+      donorId,
       amount: parsed.amount,
       date: new Date(parsed.date),
       paymentMethod: parsed.paymentMethod,
       paymentContext: parsed.paymentContext,
       type: parsed.type,
-      designatedRecipientId:
-        parsed.type === "DESIGNATED" && parsed.designatedRecipientId
-          ? parsed.designatedRecipientId
-          : null,
+      designatedRecipientId,
       notes: parsed.notes,
       recordedById: session.user.id,
     },
@@ -48,22 +70,40 @@ export async function createDonation(data: z.infer<typeof DonationSchema>) {
 export async function updateDonation(id: string, data: z.infer<typeof DonationSchema>) {
   await requireAuth({ roles: ["ADMIN"] });
   const parsed = DonationSchema.parse(data);
-  await prisma.donation.update({
-    where: { id },
-    data: {
-      donorId: parsed.isAnonymous || !parsed.donorId ? null : parsed.donorId,
-      amount: parsed.amount,
-      date: new Date(parsed.date),
-      paymentMethod: parsed.paymentMethod,
-      paymentContext: parsed.paymentContext,
-      type: parsed.type,
-      designatedRecipientId:
-        parsed.type === "DESIGNATED" && parsed.designatedRecipientId
-          ? parsed.designatedRecipientId
-          : null,
-      notes: parsed.notes,
+  await prisma.$transaction(
+    async (tx) => {
+      // The ledger must never show more distributed against a donation than
+      // the donation is worth — block amount reductions below what's already
+      // been distributed (matches the balance guard on distributions).
+      const distributed = await tx.distribution.aggregate({
+        _sum: { amount: true },
+        where: { donationId: id, deletedAt: null },
+      });
+      const distributedTotal = Number(distributed._sum.amount ?? 0);
+      if (parsed.amount < distributedTotal) {
+        throw new Error(
+          `Amount PKR ${parsed.amount} is less than the PKR ${distributedTotal} already distributed against this donation`,
+        );
+      }
+      await tx.donation.update({
+        where: { id },
+        data: {
+          donorId: parsed.isAnonymous || !parsed.donorId ? null : parsed.donorId,
+          amount: parsed.amount,
+          date: new Date(parsed.date),
+          paymentMethod: parsed.paymentMethod,
+          paymentContext: parsed.paymentContext,
+          type: parsed.type,
+          designatedRecipientId:
+            parsed.type === "DESIGNATED" && parsed.designatedRecipientId
+              ? parsed.designatedRecipientId
+              : null,
+          notes: parsed.notes,
+        },
+      });
     },
-  });
+    { isolationLevel: "Serializable" },
+  );
   revalidatePath("/donations");
   revalidatePath(`/donations/${id}`);
   revalidatePath("/overview");

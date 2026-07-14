@@ -8,6 +8,11 @@ if [ -z "$AUTH_SECRET" ] || [ "$AUTH_SECRET" = "change-me-in-production-must-be-
   exit 1
 fi
 
+if [ -z "$DATABASE_URL" ]; then
+  echo "ERROR: DATABASE_URL is not set."
+  exit 1
+fi
+
 # Run database migrations (with retries)
 echo "Running database migrations..."
 for i in $(seq 1 5); do

@@ -51,9 +51,11 @@ export async function updateUser(
 
 export async function setUserScope(userId: string, donorIds: string[], recipientIds: string[]) {
   await requireAuth({ roles: ["ADMIN"] });
+  // Dedupe defensively — UserScope now has unique (userId, donorId) /
+  // (userId, recipientId) indexes, so repeated IDs would fail the createMany.
   const rows = [
-    ...donorIds.map((donorId) => ({ userId, donorId })),
-    ...recipientIds.map((recipientId) => ({ userId, recipientId })),
+    ...[...new Set(donorIds)].map((donorId) => ({ userId, donorId })),
+    ...[...new Set(recipientIds)].map((recipientId) => ({ userId, recipientId })),
   ];
   await prisma.$transaction([
     prisma.userScope.deleteMany({ where: { userId } }),

@@ -1,9 +1,14 @@
 FROM node:24-alpine
 WORKDIR /app
-COPY package.json package-lock.json ./
+# Run as the non-root "node" user (uid 1000). chown before USER so the
+# anonymous volumes for /app/node_modules and /app/.next inherit writable
+# ownership from the image instead of root.
+RUN chown node:node /app
+USER node
+COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci
-COPY prisma/ ./prisma/
-COPY prisma.config.ts ./
+COPY --chown=node:node prisma/ ./prisma/
+COPY --chown=node:node prisma.config.ts ./
 RUN npx prisma generate
-COPY . .
+COPY --chown=node:node . .
 EXPOSE 3000

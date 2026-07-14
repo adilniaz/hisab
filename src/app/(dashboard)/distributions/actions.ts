@@ -1,6 +1,11 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, canModify, recipientFilter } from "@/lib/permissions";
+import {
+  requireAuth,
+  canModify,
+  recipientFilter,
+  assertRecipientInScope,
+} from "@/lib/permissions";
 import { getDonationRemainingBalance, getPoolBalance } from "@/lib/balance";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -39,6 +44,7 @@ export async function createDistribution(data: z.infer<typeof DistributionSchema
   const session = await requireAuth();
   if (!canModify(session)) throw new Error("Unauthorized");
   const parsed = DistributionSchema.parse(data);
+  await assertRecipientInScope(session, parsed.recipientId);
   const donationId = parsed.donationId || undefined;
 
   await prisma.$transaction(

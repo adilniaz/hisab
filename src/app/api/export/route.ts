@@ -1,18 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/permissions";
+import {
+  requireAuth,
+  donationFilter,
+  distributionFilter,
+  donorFilter,
+  recipientFilter,
+} from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { toCsv, csvResponse } from "@/lib/export-utils";
 
 export async function GET(req: NextRequest) {
-  await requireAuth({ roles: ["ADMIN"] });
+  const session = await requireAuth({ roles: ["ADMIN"] });
+  // Full-table CSV exports are expensive — cap per-admin frequency.
+  if (!checkRateLimit(`export:${session.user.id}`, 10, 5 * 60_000)) {
+    return NextResponse.json({ error: "Too many export requests" }, { status: 429 });
+  }
   const type = req.nextUrl.searchParams.get("type") ?? "donations";
 
   let csv: string;
   let filename: string;
 
   if (type === "donations") {
+    const scopeWhere = donationFilter(session);
     const rows = await prisma.donation.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...scopeWhere },
       include: { donor: true, designatedRecipient: true, recordedBy: { select: { name: true } } },
       orderBy: { date: "desc" },
     });
@@ -42,8 +54,9 @@ export async function GET(req: NextRequest) {
     );
     filename = "donations.csv";
   } else if (type === "distributions") {
+    const scopeWhere = distributionFilter(session);
     const rows = await prisma.distribution.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...scopeWhere },
       include: {
         recipient: true,
         donation: { select: { paymentContext: true } },
@@ -65,8 +78,9 @@ export async function GET(req: NextRequest) {
     );
     filename = "distributions.csv";
   } else if (type === "donors") {
+    const scopeWhere = donorFilter(session);
     const rows = await prisma.donor.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...scopeWhere },
       orderBy: { name: "asc" },
     });
     csv = toCsv(
@@ -83,8 +97,9 @@ export async function GET(req: NextRequest) {
     );
     filename = "donors.csv";
   } else if (type === "recipients") {
+    const scopeWhere = recipientFilter(session);
     const rows = await prisma.recipient.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...scopeWhere },
       orderBy: { name: "asc" },
     });
     csv = toCsv(

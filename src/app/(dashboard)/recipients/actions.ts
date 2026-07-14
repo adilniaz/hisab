@@ -1,6 +1,11 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, canModify, recipientFilter } from "@/lib/permissions";
+import {
+  requireAuth,
+  canModify,
+  recipientFilter,
+  assertRecipientInScope,
+} from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -25,6 +30,7 @@ export async function createRecipient(data: z.infer<typeof RecipientSchema>) {
 export async function updateRecipient(id: string, data: z.infer<typeof RecipientSchema>) {
   const session = await requireAuth();
   if (!canModify(session)) throw new Error("Unauthorized");
+  await assertRecipientInScope(session, id);
   await prisma.recipient.update({ where: { id }, data: RecipientSchema.parse(data) });
   revalidatePath("/recipients");
   revalidatePath(`/recipients/${id}`);

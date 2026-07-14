@@ -58,7 +58,7 @@ Runs `docker compose -f docker-compose.dev.yml up --build` — builds the app, s
 npm run start
 ```
 
-Runs `docker compose up --build` — builds a standalone production image and starts it alongside Postgres. Requires `AUTH_SECRET` and `POSTGRES_PASSWORD` to be set in `.env` (see above); the compose file refuses to start with the old placeholder values.
+Runs `docker compose up --build` — builds a standalone production image and starts it alongside Postgres. Requires `AUTH_SECRET` and `POSTGRES_PASSWORD` to be set in `.env` (see above); the compose file refuses to start with the old placeholder values. The production app publishes on host port **3002** (cookbook holds 3000 and bake_em_up holds 3001 — see `../CADDY-DEPLOYMENT.md` §1), and Postgres is bound to `127.0.0.1:5434`.
 
 For an internet-facing deploy behind Caddy (TLS termination, HSTS), see
 `../CADDY-DEPLOYMENT.md` (shared with bake_em_up/cookbook) — this app

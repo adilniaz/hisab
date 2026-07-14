@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import type { Session } from "next-auth";
@@ -51,4 +52,30 @@ export function donationFilter(session: Session): Prisma.DonationWhereInput {
 export function distributionFilter(session: Session): Prisma.DistributionWhereInput {
   if (session.user.scopeType === "ALL") return {};
   return { recipient: { userScopes: { some: { userId: session.user.id } } } };
+}
+
+// Write-side scope guards. Scope filtering applies to writes as well as
+// reads: a RESTRICTED user must not create or modify records attached to a
+// donor/recipient outside their scope (doing so would both leak the target's
+// existence and bypass the read scoping). No-ops for ALL-scope users, so the
+// common case costs no extra query.
+export async function assertDonorInScope(session: Session, donorId: string): Promise<void> {
+  if (session.user.scopeType === "ALL") return;
+  const scope = await prisma.userScope.findFirst({
+    where: { userId: session.user.id, donorId },
+    select: { id: true },
+  });
+  if (!scope) throw new Error("Unauthorized");
+}
+
+export async function assertRecipientInScope(
+  session: Session,
+  recipientId: string,
+): Promise<void> {
+  if (session.user.scopeType === "ALL") return;
+  const scope = await prisma.userScope.findFirst({
+    where: { userId: session.user.id, recipientId },
+    select: { id: true },
+  });
+  if (!scope) throw new Error("Unauthorized");
 }

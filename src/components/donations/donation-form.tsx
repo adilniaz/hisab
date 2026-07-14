@@ -11,17 +11,27 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/utils";
 
-const schema = z.object({
-  donorId: z.string().uuid().optional().or(z.literal("")),
-  isAnonymous: z.boolean().default(false),
-  amount: z.number().positive("Amount must be positive"),
-  date: z.string().min(1, "Date required"),
-  paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "EASYPAISA", "JAZZCASH", "OTHER"]),
-  paymentContext: z.enum(["ZAKAT", "SADAQAH", "GENERAL", "OTHER"]),
-  type: z.enum(["POOLED", "DESIGNATED"]),
-  designatedRecipientId: z.string().uuid().optional().or(z.literal("")),
-  notes: z.string().optional(),
-});
+const schema = z
+  .object({
+    donorId: z.string().uuid().optional().or(z.literal("")),
+    isAnonymous: z.boolean().default(false),
+    amount: z.number().positive("Amount must be positive"),
+    date: z.string().min(1, "Date required"),
+    paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "EASYPAISA", "JAZZCASH", "OTHER"]),
+    paymentContext: z.enum(["ZAKAT", "SADAQAH", "GENERAL", "OTHER"]),
+    type: z.enum(["POOLED", "DESIGNATED"]),
+    designatedRecipientId: z.string().uuid().optional().or(z.literal("")),
+    notes: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === "DESIGNATED" && !data.designatedRecipientId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["designatedRecipientId"],
+        message: "Recipient required for designated donations",
+      });
+    }
+  });
 type Fields = z.infer<typeof schema>;
 
 interface Donor {
@@ -170,6 +180,9 @@ export function DonationForm({
               </option>
             ))}
           </select>
+          {errors.designatedRecipientId && (
+            <p className="text-xs text-destructive">{errors.designatedRecipientId.message}</p>
+          )}
         </div>
       )}
       <div className="space-y-1">

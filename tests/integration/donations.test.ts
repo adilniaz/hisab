@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/permissions";
 import {
   createDonation,
+  updateDonation,
   deleteDonation,
   getDonations,
 } from "@/app/(dashboard)/donations/actions";
@@ -140,5 +141,65 @@ describe("donations actions — DB integration", () => {
     expect(result.items).toHaveLength(0);
     const stillInDb = await prisma.donation.findUnique({ where: { id: created!.id } });
     expect(stillInDb?.deletedAt).not.toBeNull();
+  });
+
+  it("blocks a RESTRICTED user from creating a donation for an out-of-scope donor", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(
+      session({ id: restrictedId, role: "DATA_ENTRY", scopeType: "RESTRICTED" }),
+    );
+
+    await expect(
+      createDonation({ ...validInput, isAnonymous: false, donorId: donorOutOfScopeId }),
+    ).rejects.toThrow("Unauthorized");
+    expect(await prisma.donation.count()).toBe(0);
+  });
+
+  it("allows a RESTRICTED user to create a donation for an in-scope donor", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(
+      session({ id: restrictedId, role: "DATA_ENTRY", scopeType: "RESTRICTED" }),
+    );
+
+    await createDonation({ ...validInput, isAnonymous: false, donorId: donorInScopeId });
+    const rows = await prisma.donation.findMany();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.donorId).toBe(donorInScopeId);
+  });
+
+  it("rejects a DESIGNATED donation without a recipient", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(session({ id: adminId, role: "ADMIN" }));
+
+    await expect(
+      createDonation({ ...validInput, type: "DESIGNATED", designatedRecipientId: "" }),
+    ).rejects.toThrow();
+    expect(await prisma.donation.count()).toBe(0);
+  });
+
+  it("rejects reducing a donation amount below what's already distributed against it", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(session({ id: adminId, role: "ADMIN" }));
+    await createDonation(validInput);
+    const [donation] = await prisma.donation.findMany();
+    const recipient = await prisma.recipient.create({
+      data: { name: "R", category: "FOOD" },
+    });
+    await prisma.distribution.create({
+      data: {
+        recipientId: recipient.id,
+        donationId: donation!.id,
+        amount: 800,
+        date: new Date("2026-01-02"),
+        purpose: "aid",
+        recordedById: adminId,
+      },
+    });
+
+    await expect(updateDonation(donation!.id, { ...validInput, amount: 500 })).rejects.toThrow(
+      /already distributed/,
+    );
+    const unchanged = await prisma.donation.findUnique({ where: { id: donation!.id } });
+    expect(Number(unchanged?.amount)).toBe(1000);
+
+    await updateDonation(donation!.id, { ...validInput, amount: 900 });
+    const updated = await prisma.donation.findUnique({ where: { id: donation!.id } });
+    expect(Number(updated?.amount)).toBe(900);
   });
 });

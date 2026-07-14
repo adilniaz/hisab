@@ -153,6 +153,8 @@ model UserScope {
   recipientId String?
   recipient   Recipient? @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, donorId])
+  @@unique([userId, recipientId])
   @@index([userId])
   @@index([donorId])
   @@index([recipientId])

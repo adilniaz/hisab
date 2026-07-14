@@ -16,6 +16,7 @@ vi.mock("@/lib/permissions", () => ({
   requireAuth: vi.fn().mockResolvedValue({ user: { id: "u1", role: "ADMIN", scopeType: "ALL" } }),
   canModify: vi.fn().mockReturnValue(true),
   recipientFilter: vi.fn().mockReturnValue({}),
+  assertRecipientInScope: vi.fn(),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
