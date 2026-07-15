@@ -58,12 +58,57 @@ Runs `docker compose -f docker-compose.dev.yml up --build` — builds the app, s
 npm run start
 ```
 
-Runs `docker compose up --build` — builds a standalone production image and starts it alongside Postgres. Requires `AUTH_SECRET` and `POSTGRES_PASSWORD` to be set in `.env` (see above); the compose file refuses to start with the old placeholder values. The production app publishes on host port **3002** (cookbook holds 3000 and bake_em_up holds 3001 — see `../CADDY-DEPLOYMENT.md` §1), and Postgres is bound to `127.0.0.1:5434`.
+Runs `docker compose up --build` — builds a standalone production image and starts it alongside Postgres. Requires `AUTH_SECRET` and `POSTGRES_PASSWORD` to be set in `.env` (see above); the compose file refuses to start with the old placeholder values. The production app publishes on host port **3002** (chosen so it doesn't collide with sibling apps if co-located on the same host — cookbook uses 3000, bake_em_up uses 3001), and Postgres is bound to `127.0.0.1:5434`.
 
-For an internet-facing deploy behind Caddy (TLS termination, HSTS), see
-`../CADDY-DEPLOYMENT.md` (shared with bake_em_up/cookbook) — this app
-already sends its own HSTS header (`src/proxy.ts`), so Caddy shouldn't add a
-second one.
+### HTTPS in production (Caddy)
+
+This app already sends its own HSTS header (`src/proxy.ts`:
+`Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`)
+and its own CSP (`next.config.ts`). Caddy's job is TLS termination and
+routing only — don't add a second HSTS header in the Caddyfile, the app
+already owns that one.
+
+```
+# /etc/caddy/Caddyfile
+hisab.example.com {
+    reverse_proxy localhost:3002
+}
+```
+
+If Caddy itself runs in Docker, use `network_mode: host` (to reach
+`localhost:3002` directly) and mount the Caddyfile plus `caddy_data`/
+`caddy_config` volumes for certs:
+
+```yaml
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+```
+
+Set `AUTH_URL` to the public `https://` domain (not `localhost`) —
+NextAuth's callback/cookie handling depends on it. `AUTH_TRUST_HOST=true`
+must be set when running behind a reverse proxy.
+
+Verify after cutover:
+
+```bash
+curl -sI https://hisab.example.com | grep -i strict-transport-security
+```
+
+Should show the header exactly once — if twice, something in the Caddyfile
+(a global `header` directive) is adding a duplicate; remove it. Plain
+`http://` requests redirect to `https://` automatically for any
+non-`localhost` domain in the Caddyfile, no explicit redirect block needed.
 
 ## Available scripts
 
