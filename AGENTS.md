@@ -6,7 +6,67 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Project: hisab
 
-A donation/distribution tracker (donors, donations, recipients, distributions, reports) for a small charitable org. See [README.md](./README.md) for what it does and how to run it.
+Hisab (Urdu/Hindi for "account" or "ledger") is a donation/distribution tracker for a small charitable org. It records who donated, whether the donation is pooled or earmarked for a specific recipient, and where every rupee was ultimately distributed — with role-based access control and per-user data scoping. See [README.md](./README.md) for the human-facing overview; this file is the complete agent-facing reference (this file is what Claude Code auto-loads via `CLAUDE.md`'s `@AGENTS.md` import — README.md is **not** auto-loaded, so anything an agent needs is folded in here too, even if it duplicates README.md).
+
+## Feature overview
+
+- **Donors & donations** — record cash/bank/EasyPaisa/JazzCash donations, pooled or designated (Zakat, Sadaqah, general, other context), with optional anonymity.
+- **Recipients & distributions** — track distributions against a specific designated donation or the general pool, with a server-enforced balance check so a distribution can never exceed what's actually available.
+- **Reports** — donor statements, recipient histories, and full audit reports, exportable to PDF and Excel. A separate `/api/export` route provides CSV exports (donations/distributions/donors/recipients), rate-limited per admin.
+- **Role-based access** — `ADMIN` / `DATA_ENTRY` / `VIEWER` roles, plus optional per-user scoping (`RESTRICTED` to specific donors/recipients vs `ALL`). See the Conventions section below for exactly how scope is enforced.
+- **Dashboard** — pool balance, unspent designated funds, a Zakat-overdue alert (designated Zakat donations >40 days old with undistributed funds), recent activity, and a 6-month trend chart.
+
+## Tech stack
+
+- [Next.js 16](https://nextjs.org) (App Router) + React 19 + TypeScript
+- [Prisma 7](https://www.prisma.io) with the Postgres driver adapter (`@prisma/adapter-pg`)
+- [NextAuth v5](https://authjs.dev) (credentials provider, JWT sessions, 24h maxAge)
+- Tailwind CSS v4 + shadcn-style components (`src/components/ui/`)
+- react-hook-form + Zod for form validation
+- `@react-pdf/renderer` (PDF reports) and `exceljs` (Excel reports/exports)
+- Vitest for tests (unit + DB-integration)
+
+## Environment variables
+
+Copy `.env.example` to `.env` and fill in real values before running anything outside Docker.
+
+| Variable | Used by | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | Prisma, when running outside Docker | Full Postgres connection string |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `docker-compose.yml` | The prod compose file fails fast if `POSTGRES_PASSWORD` isn't set — don't reuse the dev default |
+| `AUTH_SECRET` | NextAuth | Generate with `openssl rand -hex 32` (or `-base64 32`); the prod compose file fails fast if this isn't set |
+| `AUTH_URL` | NextAuth | Public URL of the app — must be the public `https://` domain in production, not `localhost` |
+| `AUTH_TRUST_HOST` | NextAuth | Must be `"true"` when running behind a reverse proxy (e.g. Caddy) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `prisma/seed.ts` | Seeds the initial admin user |
+| `NODE_ENV` | Next.js | `development` or `production` |
+
+`.env.test` / `.env.test.example` are the integration-test-only equivalents — see Testing below.
+
+## Available npm scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev stack via Docker Compose (`docker-compose.dev.yml`) — builds the app, starts Postgres, applies migrations, seeds the DB, runs `next dev` with hot reload on port 3000 |
+| `npm run dev:local` | `next dev` directly, no Docker (needs a reachable `DATABASE_URL`) |
+| `npm run build` | `next build` (used inside the prod Docker image) |
+| `npm run start` | Start the prod stack via Docker Compose (`docker-compose.yml`) — requires `AUTH_SECRET` and `POSTGRES_PASSWORD` in `.env` |
+| `npm run start:local` | `next start` directly, no Docker |
+| `npm test` | Vitest, single run |
+| `npm run test:watch` | Vitest, watch mode |
+| `npm run lint` | ESLint |
+| `npm run format` | Prettier, writes `src/` and `tests/` |
+| `npm run db:seed` | Seed the database (`prisma/seed.ts`, uses `ADMIN_EMAIL`/`ADMIN_PASSWORD`) |
+| `npm run prisma:migrate:dev` | `prisma migrate dev` — do not use in this sandboxed dev environment, see Known environment constraint below |
+| `npm run prisma:migrate:deploy` | `prisma migrate deploy` — apply pending migrations without prompting |
+| `npm run prisma:generate` | `prisma generate` |
+
+## Deployment (Caddy / HTTPS)
+
+- Production runs via `docker-compose.yml`: app publishes on host port **3002** (cookbook uses 3000, bake_em_up uses 3001, on the same host), Postgres is bound to `127.0.0.1:5434`.
+- The app already sends its own HSTS header (`src/proxy.ts`: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`) and its own CSP (`next.config.ts`). Caddy's job is TLS termination and routing only — don't add a second HSTS header in the Caddyfile.
+- Minimal Caddyfile: `reverse_proxy localhost:3002` under the app's domain block. If Caddy itself runs in Docker, use `network_mode: host` and mount the Caddyfile plus `caddy_data`/`caddy_config` volumes.
+- Set `AUTH_URL` to the public `https://` domain and `AUTH_TRUST_HOST=true` — NextAuth's callback/cookie handling depends on both being correct behind a reverse proxy.
+- Verify after cutover: `curl -sI https://<domain> | grep -i strict-transport-security` should show the header exactly once — a duplicate usually means a Caddyfile `header` directive is also adding it.
 
 ## Architecture
 
