@@ -1,5 +1,5 @@
 services:
-  postgres:
+  hisab_db:
     image: postgres:16-alpine
     container_name: hisab-db-dev
     environment:
@@ -14,7 +14,7 @@ services:
     volumes:
       - hisab-pgdata-dev:/var/lib/postgresql/data
 
-  # Ephemeral Postgres for `npm test` (integration tests, port 5433).
+  # Ephemeral Postgres for `npm test` (integration tests, port 5435).
   db_test:
     image: postgres:16-alpine
     container_name: hisab-db-test
@@ -22,34 +22,34 @@ services:
       POSTGRES_USER: hisab
       POSTGRES_PASSWORD: hisab
       POSTGRES_DB: hisab_test
-    ports: ["127.0.0.1:5434:5432"]
+    ports: ["127.0.0.1:5435:5432"]
     tmpfs:
       - /var/lib/postgresql/data
 
-  app:
+  hisab:
     build:
       context: .
       dockerfile: Dockerfile.dev
     container_name: hisab-app-dev
     depends_on:
-      postgres:
+      hisab_db:
         condition: service_healthy
     ports: ["3000:3000"]
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-hisab}:${POSTGRES_PASSWORD:-hisab}@postgres:5432/${POSTGRES_DB:-hisab}
-      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-do-not-use-in-production}
-      AUTH_URL: http://localhost:${APP_PORT:-3000}
+      INFISICAL_CLIENT_ID: ${INFISICAL_CLIENT_ID:?}
+      INFISICAL_CLIENT_SECRET: ${INFISICAL_CLIENT_SECRET:?}
+      INFISICAL_ENV: ${INFISICAL_ENV:-dev}
       AUTH_TRUST_HOST: "true"
       NODE_ENV: development
       WATCHPACK_POLLING: "true"
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hisab.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-hisab-dev-password}
+      # DATABASE_URL, AUTH_SECRET, AUTH_URL, ADMIN_EMAIL, ADMIN_PASSWORD are
+      # fetched from Infisical by scripts/docker-entrypoint.sh at startup
+      # (which also runs migrations and seeds the admin user for dev).
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
-    command: >
-      sh -c "npx prisma migrate deploy && npm run db:seed && npx next dev --hostname 0.0.0.0"
+    command: ["npx", "next", "dev", "--hostname", "0.0.0.0"]
 
 volumes:
   hisab-pgdata-dev:

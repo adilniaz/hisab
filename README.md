@@ -28,9 +28,51 @@ Hisab (Urdu/Hindi for "account" or "ledger") is a donation and distribution trac
 - Docker + Docker Compose (recommended — both dev and prod scripts run through it)
 - Node 24 if you want to run tooling (lint, tests, `prisma` CLI) outside a container
 
-### Environment variables
+### Secrets (Infisical)
 
-Copy `.env.example` to `.env` and fill in real values:
+`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`
+are managed by [Infisical](https://infisical.com) (EU Cloud) for both Docker
+flows (`npm run dev`, `npm run start`). The `infisical` CLI fetches them at
+container startup (`scripts/docker-entrypoint.sh`) — no `.env` file needed
+for these in Docker.
+
+1. Create a project at [eu.infisical.com](https://eu.infisical.com), with
+   **dev** and **prod** environments.
+2. Add these secrets to each environment:
+
+   | Secret | dev example | prod |
+   | --- | --- | --- |
+   | `DATABASE_URL` | `postgresql://hisab:hisab@hisab_db:5432/hisab` (Docker network hostname — must embed the same password as the `hisab_db` service's `POSTGRES_PASSWORD`, set separately below) | real Postgres connection string |
+   | `AUTH_SECRET` | any string | fresh `openssl rand -base64 32`, distinct from dev's |
+   | `AUTH_URL` | `http://localhost:3000` | public `https://` domain, not `localhost` |
+   | `ADMIN_EMAIL` | `admin@hisab.local` | real seed-admin email |
+   | `ADMIN_PASSWORD` | any string | real seed-admin password |
+
+3. Create a **machine identity** with Universal Auth for each environment and copy its Client ID / Client Secret.
+4. Update `workspaceId` in `.infisical.json` to match your project.
+5. Export the machine identity credentials before running Docker Compose:
+
+   ```bash
+   export INFISICAL_CLIENT_ID="<your-machine-identity-client-id>"
+   export INFISICAL_CLIENT_SECRET="<your-machine-identity-client-secret>"
+   # INFISICAL_ENV defaults to "dev" for docker-compose.dev.yml, "prod" for docker-compose.yml
+   ```
+
+The entrypoint authenticates with Infisical, exports secrets, runs
+migrations, and (outside `prod`) seeds the admin user before starting the
+app.
+
+**Caveat:** `DATABASE_URL`'s hostname (`hisab_db`) only resolves inside the
+Docker Compose network. `dev:local` / `npm test` / `prisma migrate dev` don't
+go through Infisical — they keep using `.env` / `.env.test` as before (see
+below), since those run outside Docker against `localhost`.
+
+### Environment variables (`.env` — local/non-Docker use only)
+
+Copy `.env.example` to `.env` and fill in real values. This file is only
+consulted for `dev:local`, `npm test`, `prisma migrate dev`, and to supply
+the `hisab_db`/`db_test` Postgres containers' own bootstrap credentials —
+Docker-based app runs get their secrets from Infisical instead (see above).
 
 ```bash
 cp .env.example .env
@@ -39,9 +81,9 @@ cp .env.example .env
 | Variable | Used by | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | Prisma, when running outside Docker | Full Postgres connection string |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `docker-compose.yml` | The prod compose file fails fast if `POSTGRES_PASSWORD` isn't set — don't reuse the dev default |
-| `AUTH_SECRET` | NextAuth | Generate with `openssl rand -hex 32`; the prod compose file fails fast if this isn't set |
-| `AUTH_URL` | NextAuth | Public URL of the app |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `docker-compose.yml` (bootstraps the `hisab_db` container) | Must match the password embedded in the `DATABASE_URL` secret stored in Infisical |
+| `AUTH_SECRET` | NextAuth, when running outside Docker | Generate with `openssl rand -hex 32` |
+| `AUTH_URL` | NextAuth, when running outside Docker | Public URL of the app |
 | `NODE_ENV` | Next.js | `development` or `production` |
 
 ### Development
@@ -58,7 +100,7 @@ Runs `docker compose -f docker-compose.dev.yml up --build` — builds the app, s
 npm run start
 ```
 
-Runs `docker compose up --build` — builds a standalone production image and starts it alongside Postgres. Requires `AUTH_SECRET` and `POSTGRES_PASSWORD` to be set in `.env` (see above); the compose file refuses to start with the old placeholder values. The production app publishes on host port **3002** (chosen so it doesn't collide with sibling apps if co-located on the same host — cookbook uses 3000, bake_em_up uses 3001), and Postgres is bound to `127.0.0.1:5434`.
+Runs `docker compose up --build` — builds a standalone production image and starts it alongside Postgres. Requires `POSTGRES_PASSWORD` to be set in `.env` (bootstraps the `hisab_db` container; see above) and `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET` exported in your shell (see Secrets above) — the compose file refuses to start without either. The production app publishes on host port **3002** (chosen so it doesn't collide with sibling apps if co-located on the same host — cookbook uses 3000, bake_em_up uses 3001), and Postgres is bound to `127.0.0.1:5434`.
 
 ### HTTPS in production (Caddy)
 
@@ -95,9 +137,10 @@ volumes:
   caddy_config:
 ```
 
-Set `AUTH_URL` to the public `https://` domain (not `localhost`) —
-NextAuth's callback/cookie handling depends on it. `AUTH_TRUST_HOST=true`
-must be set when running behind a reverse proxy.
+Set the `AUTH_URL` secret in Infisical's `prod` environment to the public
+`https://` domain (not `localhost`) — NextAuth's callback/cookie handling
+depends on it. `AUTH_TRUST_HOST=true` (set directly in `docker-compose.yml`,
+not a secret) must be set when running behind a reverse proxy.
 
 Verify after cutover:
 

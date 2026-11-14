@@ -1,9 +1,11 @@
 FROM node:24-alpine
 WORKDIR /app
+RUN npm install -g @infisical/cli
 # Run as the non-root "node" user (uid 1000). chown before USER so the
 # anonymous volumes for /app/node_modules and /app/.next inherit writable
 # ownership from the image instead of root.
 RUN chown node:node /app
+RUN mkdir -p /app/.next && chown node:node /app/.next
 USER node
 COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci
@@ -11,4 +13,6 @@ COPY --chown=node:node prisma/ ./prisma/
 COPY --chown=node:node prisma.config.ts ./
 RUN npx prisma generate
 COPY --chown=node:node . .
+RUN chmod +x scripts/docker-entrypoint.sh
 EXPOSE 3000
+ENTRYPOINT ["./scripts/docker-entrypoint.sh"]

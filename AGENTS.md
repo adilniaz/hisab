@@ -26,18 +26,36 @@ Hisab (Urdu/Hindi for "account" or "ledger") is a donation/distribution tracker 
 - `@react-pdf/renderer` (PDF reports) and `exceljs` (Excel reports/exports)
 - Vitest for tests (unit + DB-integration)
 
-## Environment variables
+## Secrets (Infisical)
 
-Copy `.env.example` to `.env` and fill in real values before running anything outside Docker.
+`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` are
+managed by [Infisical](https://infisical.com) (EU Cloud, `.infisical.json` at
+repo root) for both Docker flows (`npm run dev` → `docker-compose.dev.yml`,
+`npm run start` → `docker-compose.yml`). `scripts/docker-entrypoint.sh`
+authenticates via Universal Auth (`INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET`,
+exported in the host shell — required, both compose files fail fast if unset),
+exports secrets with `infisical export`, runs `prisma migrate deploy`, and
+(when `INFISICAL_ENV != "prod"`, default `"dev"`) seeds the admin user before
+`exec`-ing the container's CMD. Prod stays a manual seed step:
+`docker compose exec hisab npx tsx prisma/seed.ts`.
+
+`DATABASE_URL`'s stored value uses the Docker network hostname (`hisab_db`),
+so it only resolves inside Compose — `dev:local` / `npm test` / `prisma
+migrate dev` don't go through Infisical at all and keep using `.env` /
+`.env.test` instead (see below).
+
+## Environment variables (`.env` — local/non-Docker use only)
+
+Copy `.env.example` to `.env` and fill in real values before running anything outside Docker. Docker-based app runs get `DATABASE_URL`/`AUTH_*`/`ADMIN_*` from Infisical instead (see above) — `.env` here only bootstraps the `hisab_db`/`db_test` Postgres containers' own credentials and supplies non-Docker tooling (`dev:local`, tests, `prisma migrate dev`).
 
 | Variable | Used by | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | Prisma, when running outside Docker | Full Postgres connection string |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `docker-compose.yml` | The prod compose file fails fast if `POSTGRES_PASSWORD` isn't set — don't reuse the dev default |
-| `AUTH_SECRET` | NextAuth | Generate with `openssl rand -hex 32` (or `-base64 32`); the prod compose file fails fast if this isn't set |
-| `AUTH_URL` | NextAuth | Public URL of the app — must be the public `https://` domain in production, not `localhost` |
-| `AUTH_TRUST_HOST` | NextAuth | Must be `"true"` when running behind a reverse proxy (e.g. Caddy) |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `prisma/seed.ts` | Seeds the initial admin user |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `docker-compose.yml` (bootstraps the `hisab_db` container) | Must match the password embedded in the `DATABASE_URL` secret stored in Infisical |
+| `AUTH_SECRET` | NextAuth, when running outside Docker | Generate with `openssl rand -hex 32` (or `-base64 32`) |
+| `AUTH_URL` | NextAuth, when running outside Docker | Public URL of the app |
+| `AUTH_TRUST_HOST` | NextAuth, when running outside Docker | Must be `"true"` when running behind a reverse proxy (e.g. Caddy); set directly in both compose files (not a secret) for Docker flows |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `prisma/seed.ts`, when running outside Docker | Seeds the initial admin user |
 | `NODE_ENV` | Next.js | `development` or `production` |
 
 `.env.test` / `.env.test.example` are the integration-test-only equivalents — see Testing below.
@@ -49,7 +67,7 @@ Copy `.env.example` to `.env` and fill in real values before running anything ou
 | `npm run dev` | Start the dev stack via Docker Compose (`docker-compose.dev.yml`) — builds the app, starts Postgres, applies migrations, seeds the DB, runs `next dev` with hot reload on port 3000 |
 | `npm run dev:local` | `next dev` directly, no Docker (needs a reachable `DATABASE_URL`) |
 | `npm run build` | `next build` (used inside the prod Docker image) |
-| `npm run start` | Start the prod stack via Docker Compose (`docker-compose.yml`) — requires `AUTH_SECRET` and `POSTGRES_PASSWORD` in `.env` |
+| `npm run start` | Start the prod stack via Docker Compose (`docker-compose.yml`) — requires `POSTGRES_PASSWORD` in `.env` and `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET` exported in the shell |
 | `npm run start:local` | `next start` directly, no Docker |
 | `npm test` | Vitest, single run |
 | `npm run test:watch` | Vitest, watch mode |
@@ -65,7 +83,7 @@ Copy `.env.example` to `.env` and fill in real values before running anything ou
 - Production runs via `docker-compose.yml`: app publishes on host port **3002** (cookbook uses 3000, bake_em_up uses 3001, on the same host), Postgres is bound to `127.0.0.1:5434`.
 - The app already sends its own HSTS header (`src/proxy.ts`: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`) and its own CSP (`next.config.ts`). Caddy's job is TLS termination and routing only — don't add a second HSTS header in the Caddyfile.
 - Minimal Caddyfile: `reverse_proxy localhost:3002` under the app's domain block. If Caddy itself runs in Docker, use `network_mode: host` and mount the Caddyfile plus `caddy_data`/`caddy_config` volumes.
-- Set `AUTH_URL` to the public `https://` domain and `AUTH_TRUST_HOST=true` — NextAuth's callback/cookie handling depends on both being correct behind a reverse proxy.
+- Set the `AUTH_URL` secret in Infisical's `prod` environment to the public `https://` domain, and `AUTH_TRUST_HOST=true` (in `docker-compose.yml`) — NextAuth's callback/cookie handling depends on both being correct behind a reverse proxy.
 - Verify after cutover: `curl -sI https://<domain> | grep -i strict-transport-security` should show the header exactly once — a duplicate usually means a Caddyfile `header` directive is also adding it.
 
 ## Architecture

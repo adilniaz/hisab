@@ -33,9 +33,11 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY prisma/ ./prisma/
 COPY prisma.config.ts ./
+COPY .infisical.json ./.infisical.json
 COPY scripts/docker-entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x entrypoint.sh
+RUN npm install -g @infisical/cli
 USER nextjs
 EXPOSE 3000
 ENTRYPOINT ["./entrypoint.sh"]
